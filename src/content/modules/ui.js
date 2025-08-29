@@ -6,7 +6,7 @@ import {
   getProfilePicData,
 } from "./followAnalyzer.js";
 
-// inject styles onto page
+// Inject styles onto page
 export function injectStyles() {
   if (document.getElementById("instafn-scan-styles")) return;
   const marker = document.createElement("div");
@@ -15,7 +15,7 @@ export function injectStyles() {
   document.head.appendChild(marker);
 }
 
-// following and unfollowing helpers
+// Fetch user info from Instagram API
 export async function fetchUserInfo(username) {
   try {
     const response = await fetch(
@@ -56,6 +56,7 @@ export async function fetchUserInfo(username) {
   return null;
 }
 
+// Follow/unfollow user helpers
 export async function followUser(userId) {
   const csrftoken = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) ||
     [])[1];
@@ -110,6 +111,7 @@ export async function unfollowUser(userId) {
   return response.json();
 }
 
+// Create follow button component
 export function createFollowButton(
   username,
   isFollowing,
@@ -164,6 +166,7 @@ export function createFollowButton(
   return btn;
 }
 
+// Helper functions
 function getProfileUsernameFromPath() {
   const m = location.pathname.match(/^\/([^\/]+)\/?$/);
   return m ? m[1] : null;
@@ -172,6 +175,7 @@ function getProfileUsernameFromPath() {
 let cachedMe = null;
 let meCacheTime = 0;
 const ME_CACHE_DURATION = 5 * 60 * 1000;
+
 async function getMeCached() {
   const now = Date.now();
   if (cachedMe && now - meCacheTime < ME_CACHE_DURATION) return cachedMe;
@@ -190,6 +194,7 @@ async function isOwnProfile() {
   return username.toLowerCase() === me.username.toLowerCase();
 }
 
+// Create and inject scan button
 function createScanButton() {
   const btn = document.createElement("button");
   btn.className = "instafn-scan-btn";
@@ -225,8 +230,8 @@ function placeScanButton() {
 }
 
 let scanBtnObserver = null;
+
 export async function injectScanButton() {
-  // check if we are on our own profile
   const pathOk = /^\/[A-Za-z0-9._]+\/?$/.test(window.location.pathname);
   if (!pathOk) return;
   const me = await getMeCached();
@@ -256,6 +261,7 @@ export async function injectScanButton() {
   scanBtnObserver.observe(document.body, { childList: true, subtree: true });
 }
 
+// Modal functionality
 export async function openModal(titleText) {
   injectStyles();
   const overlay = document.createElement("div");
@@ -293,6 +299,7 @@ export async function openModal(titleText) {
   return overlay;
 }
 
+// Confirmation modal
 export function confirmWithModal({
   title = "Confirm",
   message = "Are you sure?",
@@ -303,11 +310,9 @@ export function confirmWithModal({
     try {
       const overlay = await openModal(title);
       const modal = overlay.querySelector(".instafn-modal");
-
       modal.classList.add("instafn-modal--narrow");
       const tabs = modal.querySelector(".instafn-tabs");
       const content = modal.querySelector(".instafn-content");
-
       tabs.style.display = "none";
 
       content.innerHTML = `
@@ -319,20 +324,22 @@ export function confirmWithModal({
           </div>
         </div>
       `;
+
       const cleanupAndResolve = (value) => {
         overlay.remove();
         resolve(value);
       };
+
       content
         .querySelector("[data-instafn-cancel]")
         .addEventListener("click", () => cleanupAndResolve(false));
       content
         .querySelector("[data-instafn-confirm]")
         .addEventListener("click", () => cleanupAndResolve(true));
-      // Close button acts like cancel
+
       const closeBtn = modal.querySelector(".instafn-close");
       if (closeBtn) closeBtn.onclick = () => cleanupAndResolve(false);
-      // Escape key to cancel
+
       const onKey = (e) => {
         if (e.key === "Escape") {
           document.removeEventListener("keydown", onKey, true);
@@ -345,12 +352,12 @@ export function confirmWithModal({
         if (e.target === overlay) cleanupAndResolve(false);
       });
     } catch (_) {
-
       resolve(confirm(message));
     }
   });
 }
 
+// Render scan button interface
 export async function renderScanButton(content, overlay) {
   const prevData = await loadPreviousSnapshot();
   const hasPreviousScan =
@@ -468,6 +475,7 @@ export async function renderScanButton(content, overlay) {
   });
 }
 
+// Render analysis results
 export async function renderAnalysisInto(container, data) {
   const tabDefs = [
     { key: "dontFollowYouBack", label: "Don't follow you back" },
@@ -478,6 +486,7 @@ export async function renderAnalysisInto(container, data) {
     { key: "peopleYouUnfollowed", label: "Since last: You unfollowed" },
     { key: "mutuals", label: "Mutual followers" },
   ];
+
   const modal = container.closest(".instafn-modal");
   const tabsBar = modal.querySelector(".instafn-tabs");
   tabsBar.innerHTML = "";

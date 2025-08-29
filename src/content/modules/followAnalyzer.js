@@ -68,16 +68,19 @@ export async function fetchFriendList(userId, type) {
   const results = [];
   let cursor = null;
   let safety = 0;
+
   while (safety < 100) {
     safety++;
     const params = new URLSearchParams();
     params.set("count", "200");
     if (cursor) params.set("max_id", cursor);
+
     const url = `https://www.instagram.com/api/v1/friendships/${encodeURIComponent(
       userId
     )}/${type}/?${params.toString()}`;
     const data = await safeFetchJson(url);
     const users = data?.users || data?.profiles || [];
+
     for (const u of users) {
       const username = u?.username;
       const pk = String(u?.pk || u?.id || "");
@@ -108,6 +111,7 @@ export async function fetchFriendList(userId, type) {
         });
       }
     }
+
     const next = data?.next_max_id || data?.next_max_id || null;
     if (!next) break;
     cursor = String(next);
@@ -115,7 +119,7 @@ export async function fetchFriendList(userId, type) {
   return results;
 }
 
-// need to cache pfps to not reach the rate limit so fast
+// Cache profile pics to avoid rate limits
 async function convertImageToBase64(url) {
   try {
     const response = await fetch(url);
@@ -145,10 +149,8 @@ export function extractUsernames(data) {
 function processPreviousData(prev) {
   if (!prev || !prev.current)
     return { prevFollowers: new Set(), prevFollowing: new Set() };
-
   const prevFollowers = new Set(extractUsernames(prev.current.followers));
   const prevFollowing = new Set(extractUsernames(prev.current.following));
-
   return { prevFollowers, prevFollowing };
 }
 
@@ -201,7 +203,6 @@ export async function saveSnapshot(snapshot) {
             }
           );
         } else {
-          // check if its the same or different account
           chrome.storage.local.set({ [SCAN_STORAGE_KEY]: snapshot }, () =>
             resolve()
           );
@@ -236,7 +237,6 @@ export async function computeFollowAnalysis() {
 
   if (prev.current) {
     const { prevFollowers, prevFollowing } = processPreviousData(prev);
-
     peopleYouFollowed = setDiff(followingSet, prevFollowing);
     peopleYouUnfollowed = setDiff(prevFollowing, followingSet);
     newFollowers = setDiff(followerSet, prevFollowers);

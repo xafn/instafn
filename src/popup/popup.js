@@ -27,18 +27,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     chrome.storage.sync.set(newCfg, () => {
-      // Provide specific feedback for follow analyzer setting
-      if (newCfg.activateFollowAnalyzer) {
-        console.log(
-          "Instafn: Follow Analyzer enabled. Refresh Instagram pages to see the scan button."
-        );
-      } else {
-        console.log(
-          "Instafn: Follow Analyzer disabled. Scan buttons will be removed from Instagram pages."
-        );
-      }
-
-      // Show success message briefly before closing
       const saveBtn = document.getElementById("save");
       const originalText = saveBtn.textContent;
       saveBtn.textContent = "Saved!";

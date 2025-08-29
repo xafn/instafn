@@ -14,6 +14,7 @@ export function interceptLikes() {
           'svg[aria-label="Like"], svg[aria-label="Unlike"]'
         ) || null;
       const isLikeArea = !!(heartSvg || heartInsideWrapper);
+
       if (isLikeArea) {
         e.stopImmediatePropagation();
         e.stopPropagation();
@@ -28,6 +29,7 @@ export function interceptLikes() {
               confirmText: isLiked ? "Unlike" : "Like",
             })
           : confirm(`Do you want to ${action} this post?`);
+
         if (confirmed) {
           const targetEl = clickableWrapper || likeIcon;
           const eventInit = {
@@ -43,6 +45,7 @@ export function interceptLikes() {
           const mouseDown = new MouseEvent("mousedown", eventInit);
           const mouseUp = new MouseEvent("mouseup", eventInit);
           const clickEvt = new MouseEvent("click", eventInit);
+
           try {
             targetEl.dispatchEvent(pointerDown);
           } catch (_) {}
@@ -60,24 +63,22 @@ export function interceptLikes() {
     true
   );
 
-  // detects double clicks on post images
+  // Detect double clicks on post images
   document.addEventListener(
     "dblclick",
     async (e) => {
       if (e.isTrusted === false) return;
-      console.log("Instafn: Double-click detected on:", e.target);
-
       const postImage = e.target.closest(
         'div[role="button"] img, div[role="button"], img'
       );
+
       if (postImage) {
         e.stopImmediatePropagation();
         e.stopPropagation();
         e.preventDefault();
-        // check if its a video post
+
         const postContainer = e.target.closest('div[role="button"]');
         if (postContainer && postContainer.querySelector("video")) {
-          console.log("Instafn: Video post detected, skipping confirmation");
           const evt = new MouseEvent("dblclick", {
             bubbles: true,
             cancelable: true,
@@ -92,16 +93,13 @@ export function interceptLikes() {
           (postContainer &&
             (postContainer.querySelector('[data-testid="story"]') ||
               postContainer.querySelector('[aria-label*="story"]')));
-
         const isReel =
           window.location.pathname.includes("/reels/") ||
           (postContainer &&
             (postContainer.querySelector('[data-testid="reel"]') ||
               postContainer.querySelector('[aria-label*="reel"]')));
 
-        // if its a story or reel, let it through since you cant double click to like
         if (isStory || isReel) {
-          console.log("Instafn: Story/Reel detected, skipping confirmation");
           const evt = new MouseEvent("dblclick", {
             bubbles: true,
             cancelable: true,
@@ -111,7 +109,6 @@ export function interceptLikes() {
           return;
         }
 
-        console.log("Instafn: Image post found, showing confirmation");
         const confirmed = (await window.Instafn?.confirmWithModal)
           ? await window.Instafn.confirmWithModal({
               title: "Confirm like",
@@ -119,6 +116,7 @@ export function interceptLikes() {
               confirmText: "Like",
             })
           : confirm("Do you want to like this post?");
+
         if (confirmed) {
           const target = postImage.closest('div[role="button"]') || postImage;
           const evt = new MouseEvent("dblclick", {
@@ -154,6 +152,7 @@ export function interceptComments() {
               confirmText: "Post",
             })
           : confirm("Do you want to post this comment?");
+
         if (confirmed) {
           const evt = new MouseEvent("click", {
             bubbles: true,
@@ -167,7 +166,7 @@ export function interceptComments() {
     true
   );
 
-  // check if enter was pressed to comment
+  // Check if enter was pressed to comment
   document.addEventListener(
     "keydown",
     async (e) => {
@@ -187,8 +186,8 @@ export function interceptComments() {
                 confirmText: "Post",
               })
             : confirm("Do you want to post this comment?");
+
           if (confirmed) {
-            // Prefer clicking the Post button near the textarea
             const container =
               textarea.closest("form, div, section") || document;
             const postBtn = container.querySelector(
@@ -202,7 +201,6 @@ export function interceptComments() {
               });
               postBtn.dispatchEvent(evt);
             } else {
-              // Fallback: dispatch Enter keydown
               const keyEvt = new KeyboardEvent("keydown", {
                 key: "Enter",
                 bubbles: true,
@@ -239,6 +237,7 @@ export function interceptCalls() {
               confirmText: "Start call",
             })
           : confirm("Do you want to start this call?");
+
         if (confirmed) {
           const clickable =
             (videoCallButton || audioCallButton).closest(
@@ -264,16 +263,12 @@ export function interceptFollows() {
     "click",
     async (e) => {
       if (e.isTrusted === false) return;
-      // first look for any button type
       const followButton = e.target.closest('button, div[role="button"]');
       if (followButton) {
-        // check to see if it contains "Follow" to intercept
         let followText = null;
-
         if (followButton.tagName === "BUTTON") {
           followText = followButton.querySelector('div[dir="auto"]');
-        }
-        else if (
+        } else if (
           followButton.tagName === "DIV" &&
           followButton.getAttribute("role") === "button"
         ) {
@@ -295,6 +290,7 @@ export function interceptFollows() {
                 confirmText: "Follow",
               })
             : confirm("Do you want to follow this user?");
+
           if (confirmed) {
             const evt = new MouseEvent("click", {
               bubbles: true,
@@ -344,14 +340,10 @@ export function interceptStoryQuickReactions() {
         } else {
           return false;
         }
-
-        console.log(`Instafn: Quick reaction ${emoji} confirmed`);
       }
     },
     true
   );
-
-  console.log("Instafn: Quick reaction confirmation enabled");
 }
 
 export function interceptStoryReplies() {
@@ -371,6 +363,7 @@ export function interceptStoryReplies() {
               confirmText: "Send",
             })
           : confirm("Do you want to send this story reply?");
+
         if (confirmed) {
           const evt = new MouseEvent("click", {
             bubbles: true,
@@ -378,7 +371,6 @@ export function interceptStoryReplies() {
             view: window,
           });
           sendButton.dispatchEvent(evt);
-          console.log("Instafn: Story reply confirmed");
         } else {
           return false;
         }
@@ -387,7 +379,7 @@ export function interceptStoryReplies() {
     true
   );
 
-  // checks if enter was pressed to reply to a story
+  // Check if enter was pressed to reply to a story
   document.addEventListener(
     "keydown",
     async (e) => {
@@ -405,6 +397,7 @@ export function interceptStoryReplies() {
                 confirmText: "Send",
               })
             : confirm("Do you want to send this story reply?");
+
           if (confirmed) {
             const container =
               textarea.closest("form, div, section") || document;
@@ -426,7 +419,6 @@ export function interceptStoryReplies() {
               });
               textarea.dispatchEvent(keyEvt);
             }
-            console.log("Instafn: Story reply confirmed via Enter key");
           } else {
             return false;
           }
@@ -435,6 +427,4 @@ export function interceptStoryReplies() {
     },
     true
   );
-
-  console.log("Instafn: Story reply confirmation enabled");
 }
