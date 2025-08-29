@@ -19,7 +19,7 @@ async function safeFetchJson(url) {
   if (!resp.ok) {
     if (resp.status === 429) {
       throw new Error(
-        "Rate limited by Instagram (HTTP 429). Please try again in 15–60 minutes."
+        "Rate limited by Instagram (HTTP 429). Please try again in 2-3 hours."
       );
     }
     throw new Error(`HTTP ${resp.status} for ${url}`);

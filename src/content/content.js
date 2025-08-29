@@ -21,6 +21,8 @@ import {
   confirmWithModal,
 } from "./modules/ui.js";
 
+import { initVideoScrubber } from "./modules/videoScrubber.js";
+
 // Initialize user info cache
 window.userInfoCache = new Map();
 
@@ -43,24 +45,6 @@ function injectStoryBlocking() {
   }
 }
 
-// Inject a small page-bridge so `window.Instafn.scanFollowers()` works from the page console
-function injectInstafnBridge() {
-  try {
-    const bridge = document.createElement("script");
-    bridge.src = chrome.runtime.getURL("content/bridge.js");
-    bridge.async = false;
-    bridge.onload = function() {
-      console.log("Instafn: Bridge script loaded successfully");
-    };
-    bridge.onerror = function() {
-      console.error("Instafn: Failed to load bridge.js");
-    };
-    (document.head || document.documentElement).appendChild(bridge);
-  } catch (err) {
-    console.error("Instafn: Error injecting Instafn bridge:", err);
-  }
-}
-
 // Inject CSS styles
 function injectPageStyles() {
   try {
@@ -80,87 +64,6 @@ function injectPageStyles() {
   }
 }
 
-// Add an eye icon to story UI to manually mark seen
-function initStoryEyeInjector() {
-  const EYE_BUTTON_CLASS = "instafn-story-eye";
-
-  function createEyeButton() {
-    const btn = document.createElement("div");
-    btn.className = EYE_BUTTON_CLASS;
-    btn.setAttribute("role", "button");
-    btn.setAttribute("tabindex", "0");
-    btn.style.cursor = "pointer";
-    btn.style.display = "flex";
-    btn.style.alignItems = "center";
-    btn.style.justifyContent = "center";
-    btn.style.width = "40px";
-    btn.style.height = "40px";
-
-    btn.innerHTML =
-      '<svg aria-label="Mark seen" class="x1lliihq x1n2onr6 xq3z1fi" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><title>Mark seen</title><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"></path><circle cx="12" cy="12" r="2.5"></circle></svg>';
-
-    const onActivate = () => {
-      try {
-        window.postMessage({ source: "instafn", type: "MARK_STORY_SEEN" }, "*");
-      } catch (err) {
-        console.warn("Instafn: Failed to request story seen:", err);
-      }
-    };
-    btn.addEventListener("click", onActivate, true);
-    btn.addEventListener(
-      "keydown",
-      (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onActivate();
-        }
-      },
-      true
-    );
-    return btn;
-  }
-
-  function isInStoryContext(fromEl) {
-    if (!fromEl) return false;
-    const container = fromEl.closest("div, section, article") || document;
-    return !!container.querySelector(
-      'textarea[placeholder*="Reply to"], textarea[placeholder^="Reply to "]'
-    );
-  }
-
-  function injectNearLikeIcon(likeSvg) {
-    try {
-      if (!likeSvg) return false;
-      if (!isInStoryContext(likeSvg)) return false;
-      const clickable =
-        likeSvg.closest('button, [role="button"], a, div[role="button"]') ||
-        likeSvg.closest("div, button, a") ||
-        likeSvg;
-      const parent = clickable.parentElement || clickable.closest("div");
-      if (!parent) return false;
-      if (parent.querySelector("." + EYE_BUTTON_CLASS)) return true;
-      const btn = createEyeButton();
-      parent.insertBefore(btn, clickable);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function scanOnce() {
-    const likeSvgs = document.querySelectorAll(
-      'svg[aria-label="Like"], svg[aria-label="Unlike"]'
-    );
-    for (const svg of likeSvgs) {
-      injectNearLikeIcon(svg);
-    }
-  }
-
-  const observer = new MutationObserver(() => scanOnce());
-  observer.observe(document.body, { childList: true, subtree: true });
-  scanOnce();
-}
-
 // Wait until the DOM is ready for other features
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Instafn: DOM loaded, initializing other features...");
@@ -176,6 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
       confirmStoryQuickReactions: true,
       confirmStoryReplies: true,
       activateFollowAnalyzer: true,
+      enableVideoScrubber: false,
     },
     (settings) => {
       console.log("Instafn: Settings loaded:", settings);
@@ -189,12 +93,20 @@ document.addEventListener("DOMContentLoaded", () => {
       if (settings.confirmStoryQuickReactions) interceptStoryQuickReactions();
       if (settings.confirmStoryReplies) interceptStoryReplies();
 
-      // Conditionally inject the follow analyzer bridge based on settings
-      if (settings.activateFollowAnalyzer) {
-        console.log("Instafn: Follow analyzer enabled, injecting bridge");
-        injectInstafnBridge();
+      // Initialize video scrubber
+      if (settings.enableVideoScrubber) {
+        console.log("Instafn: Video scrubber enabled");
+        initVideoScrubber(true);
       } else {
-        console.log("Instafn: Follow analyzer disabled, bridge not injected");
+        console.log("Instafn: Video scrubber disabled");
+        initVideoScrubber(false);
+      }
+
+      // Follow analyzer is now always available since we're using Vite
+      if (settings.activateFollowAnalyzer) {
+        console.log("Instafn: Follow analyzer enabled");
+      } else {
+        console.log("Instafn: Follow analyzer disabled");
       }
 
       // If this is a fresh install (no settings saved yet), enable follow analyzer by default
@@ -205,7 +117,6 @@ document.addEventListener("DOMContentLoaded", () => {
           );
           chrome.storage.sync.set({ activateFollowAnalyzer: true }, () => {
             console.log("Instafn: Follow analyzer enabled for fresh install");
-            injectInstafnBridge();
           });
         }
       });
@@ -218,9 +129,6 @@ injectStoryBlocking();
 
 // Inject styles immediately
 injectPageStyles();
-
-// Initialize the story eye injector shortly after load
-setTimeout(initStoryEyeInjector, 800);
 
 // Listen for messages from the bridge script
 window.addEventListener("message", async (event) => {
@@ -273,6 +181,15 @@ new MutationObserver(() => {
 // Initial check
 checkAndInjectScanButton();
 
+// Listen for storage changes to update video scrubber
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === "sync" && changes.enableVideoScrubber) {
+    const newValue = changes.enableVideoScrubber.newValue;
+    console.log("Instafn: Video scrubber setting changed to:", newValue);
+    initVideoScrubber(newValue);
+  }
+});
+
 // Export functions for global access
 window.Instafn = {
   scanFollowers: scanFollowersAndFollowing,
@@ -283,3 +200,9 @@ window.Instafn = {
   renderScanButton,
   confirmWithModal,
 };
+
+// Log available functions to console
+console.log("Instafn: Available functions:", Object.keys(window.Instafn));
+console.log(
+  "Instafn: Use 'Instafn.scanFollowers()' in console to analyze followers"
+);

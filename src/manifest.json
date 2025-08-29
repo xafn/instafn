@@ -34,8 +34,7 @@
         {
             "resources": [
                 "content/storyblocking.js",
-                "styles/styles.css",
-                "content/bridge.js"
+                "styles/styles.css"
             ],
             "matches": [
                 "*://www.instagram.com/*"

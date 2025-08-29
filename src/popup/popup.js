@@ -8,6 +8,7 @@ const DEFAULTS = {
   confirmStoryQuickReactions: true,
   confirmStoryReplies: true,
   activateFollowAnalyzer: true,
+  enableVideoScrubber: false,
 };
 
 document.addEventListener("DOMContentLoaded", () => {

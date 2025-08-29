@@ -122,18 +122,4 @@
       };
     }
   }
-
-  // test
-  setTimeout(() => {
-    try {
-      const testXHR = new XMLHttpRequest();
-      testXHR.open("POST", "https://test.com");
-      testXHR.send("PolarisAPIReelSeenMutation");
-      console.log("Instafn: XHR blocking test completed");
-    } catch (err) {
-      console.log("Instafn: XHR blocking test error (expected):", err.message);
-    }
-  }, 1000);
-
-  console.log("Instafn: Story blocking enabled (DM-safe)");
 })();

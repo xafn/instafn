@@ -565,3 +565,366 @@
         background: #333333 !important;
     }
 }
+
+/* Video scrubber styles - outside dark mode to avoid conflicts */
+.instafn-video-scrubber-enabled video {
+    --ig-video-controls-opacity: 0 !important;
+    transition: --ig-video-controls-opacity 0.3s ease !important;
+}
+
+.instafn-video-scrubber-enabled video::-webkit-media-controls {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.instafn-video-scrubber-enabled video::-webkit-media-controls-panel {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.instafn-video-scrubber-enabled video::-webkit-media-controls-play-button {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.instafn-video-scrubber-enabled video::-webkit-media-controls-timeline {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+    height: 4px !important;
+    border-radius: 2px !important;
+}
+
+.instafn-video-scrubber-enabled video::-webkit-media-controls-current-time-display,
+.instafn-video-scrubber-enabled video::-webkit-media-controls-time-remaining-display {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+}
+
+/* Hide mute button by default */
+.instafn-video-scrubber-enabled video::-webkit-media-controls-mute-button {
+    display: none !important;
+}
+
+/* Style video player controls to match Instagram's UI font */
+.instafn-video-scrubber-enabled video::-webkit-media-controls {
+    font-family:
+        var(--font-family-system),
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+}
+
+.instafn-video-scrubber-enabled video::-webkit-media-controls-panel {
+    font-family:
+        var(--font-family-system),
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+}
+
+.instafn-video-scrubber-enabled video::-webkit-media-controls-current-time-display,
+.instafn-video-scrubber-enabled video::-webkit-media-controls-time-remaining-display {
+    font-family:
+        var(--font-family-system),
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Style video captions/subtitles if they exist */
+.instafn-video-scrubber-enabled video::cue {
+    font-family:
+        var(--font-family-system),
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: white !important;
+    background-color: rgba(0, 0, 0, 0.7) !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+}
+
+/* Show controls on hover */
+.instafn-video-scrubber-enabled div[role="button"]:hover video,
+.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video,
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video {
+    --ig-video-controls-opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls,
+.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video::-webkit-media-controls,
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls {
+    opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls-panel,
+.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video::-webkit-media-controls-panel,
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-panel {
+    opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls-play-button,
+.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video::-webkit-media-controls-play-button,
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-play-button {
+    opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls-timeline,
+.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video::-webkit-media-controls-timeline,
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-timeline {
+    opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls-current-time-display,
+.instafn-video-scrubber-enabled
+    div[data-testid="video-container"]:hover
+    video::-webkit-media-controls-current-time-display,
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-current-time-display,
+.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls-time-remaining-display,
+.instafn-video-scrubber-enabled
+    div[data-testid="video-container"]:hover
+    video::-webkit-media-controls-time-remaining-display,
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-time-remaining-display {
+    opacity: 1 !important;
+}
+
+/* Override Instagram's default video control hiding */
+.instafn-video-scrubber-enabled video[controls] {
+    --ig-video-controls-opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled video[controls]::-webkit-media-controls {
+    display: flex !important;
+    opacity: 1 !important;
+}
+
+/* Additional overrides for Instagram's video control hiding */
+.instafn-video-scrubber-enabled video::-webkit-media-controls-enclosure {
+    display: flex !important;
+    opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled video::-webkit-media-controls-overlay-play-button {
+    display: flex !important;
+    opacity: 1 !important;
+}
+
+/* Specific styling for reels - Instagram uses different structure for reels */
+.instafn-video-scrubber-enabled div[data-testid="reel"] video {
+    --ig-video-controls-opacity: 0 !important;
+    transition: --ig-video-controls-opacity 0.3s ease !important;
+}
+
+.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 10001 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-panel {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 10001 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-play-button {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 10001 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-timeline {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 10001 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+    height: 4px !important;
+    border-radius: 2px !important;
+}
+
+.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-current-time-display,
+.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-time-remaining-display {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 10001 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+}
+
+/* Show reel controls on hover */
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video {
+    --ig-video-controls-opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls {
+    opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-panel {
+    opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-play-button {
+    opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-timeline {
+    opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-current-time-display,
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-time-remaining-display {
+    opacity: 1 !important;
+}
+
+/* Force reel controls to be above Instagram overlays */
+.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-enclosure {
+    z-index: 10001 !important;
+    pointer-events: auto !important;
+}
+
+/* Additional reel-specific selectors that Instagram might use */
+.instafn-video-scrubber-enabled div[role="presentation"] video::-webkit-media-controls,
+.instafn-video-scrubber-enabled div[data-visualcompletion="ignore"] video::-webkit-media-controls {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 10001 !important;
+    pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.instafn-video-scrubber-enabled div[role="presentation"]:hover video::-webkit-media-controls,
+.instafn-video-scrubber-enabled div[data-visualcompletion="ignore"]:hover video::-webkit-media-controls {
+    opacity: 1 !important;
+}
+
+/* Force controls to be visible even when Instagram tries to hide them */
+.instafn-video-scrubber-enabled video[data-instafn-scrubber-enabled] {
+    --ig-video-controls-opacity: 1 !important;
+}
+
+.instafn-video-scrubber-enabled video[data-instafn-scrubber-enabled]::-webkit-media-controls {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Override any Instagram-specific hiding */
+.instafn-video-scrubber-enabled video[data-instafn-scrubber-enabled]::-webkit-media-controls-panel {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+}
+
+/* Ensure video controls are above Instagram overlays */
+.instafn-video-scrubber-enabled video::-webkit-media-controls-enclosure {
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+}
+
+/* Make sure the video element itself allows pointer events on controls */
+.instafn-video-scrubber-enabled video {
+    pointer-events: auto !important;
+}
+
+/* Override any Instagram overlays that might block controls */
+.instafn-video-scrubber-enabled div[role="button"] video::-webkit-media-controls,
+.instafn-video-scrubber-enabled div[data-testid="video-container"] video::-webkit-media-controls,
+.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls {
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+}
+
+/* Handle Instagram's audio control button that overlays videos */
+.instafn-video-scrubber-enabled button[aria-label="Toggle audio"] {
+    z-index: 9998 !important;
+    pointer-events: auto !important;
+}
+
+/* Ensure the audio button doesn't block video controls */
+.instafn-video-scrubber-enabled button[aria-label="Toggle audio"] + div,
+.instafn-video-scrubber-enabled div[data-instancekey] button[aria-label="Toggle audio"] {
+    z-index: 9998 !important;
+    pointer-events: auto !important;
+}
+
+/* Make sure video controls are above the audio button */
+.instafn-video-scrubber-enabled video::-webkit-media-controls {
+    z-index: 10000 !important;
+    pointer-events: auto !important;
+}
+
+/* Specific handling for the audio control container */
+.instafn-video-scrubber-enabled div[data-instancekey] {
+    pointer-events: none !important;
+}
+
+.instafn-video-scrubber-enabled div[data-instancekey] button[aria-label="Toggle audio"] {
+    pointer-events: auto !important;
+    z-index: 9998 !important;
+}
+
+/* Ensure video controls can receive clicks even when audio button is present */
+.instafn-video-scrubber-enabled video::-webkit-media-controls-panel {
+    z-index: 10000 !important;
+    pointer-events: auto !important;
+}
+
+.instafn-video-scrubber-enabled video::-webkit-media-controls-timeline {
+    z-index: 10000 !important;
+    pointer-events: auto !important;
+}
+
+.instafn-video-scrubber-enabled video::-webkit-media-controls-play-button {
+    z-index: 10000 !important;
+    pointer-events: auto !important;
+}
