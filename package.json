@@ -1,0 +1,15 @@
+{
+    "name": "instafn",
+    "version": "0.0.1",
+    "description": "Feature-rich mod for Instagram web, including interaction confirms, following analyzer, and disabling seen receipts.",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "devDependencies": {
+        "vite": "^5.0.0",
+        "vite-plugin-chrome-extension": "^0.0.7"
+    }
+}

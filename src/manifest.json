@@ -1,0 +1,45 @@
+{
+    "manifest_version": 3,
+    "name": "instafn",
+    "author": "afn",
+    "version": "0.0.1",
+    "description": "Instagram mod for the web. Confirm likes, comments, follows, calls. Block seen/read receipts.",
+    "permissions": [
+        "scripting",
+        "storage"
+    ],
+    "host_permissions": [
+        "*://www.instagram.com/*"
+    ],
+    "background": {
+        "service_worker": "background/background.js"
+    },
+    "action": {
+        "default_title": "Instagram Privacy Guard",
+        "default_popup": "popup/popup.html"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "*://www.instagram.com/*"
+            ],
+            "js": [
+                "content/content.js"
+            ],
+            "run_at": "document_start",
+            "all_frames": true
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "content/storyblocking.js",
+                "styles/styles.css",
+                "content/bridge.js"
+            ],
+            "matches": [
+                "*://www.instagram.com/*"
+            ]
+        }
+    ]
+}

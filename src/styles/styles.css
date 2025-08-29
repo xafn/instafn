@@ -1,0 +1,567 @@
+/* Instafn Custom Styles */
+
+/* Footer text replacement - make it highlightable */
+._ab8i span {
+    font-size: 0 !important;
+    position: relative !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+}
+
+._ab8i span::before {
+    content: "💽 Instafn v0.0.1 by afn.im" !important;
+    font-size: 12px !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    color: inherit !important;
+    font-family: inherit !important;
+    font-weight: inherit !important;
+    text-transform: none !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    white-space: nowrap !important;
+    display: inline-block !important;
+    z-index: 1 !important;
+}
+
+/* Scan button styles */
+.instafn-scan-btn {
+    background-color: rgb(var(--ig-colors-button-secondary-background)) !important;
+    color: rgb(var(--ig-primary-text)) !important;
+    border: none !important;
+    padding: 0 16px !important;
+    margin: 0 !important;
+    font-size: 0.875rem !important;
+    font-weight: var(--font-weight-system-semibold) !important;
+    cursor: pointer !important;
+    font-family: var(--font-family-system) !important;
+    text-decoration: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: var(--system-14-line-height) !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    z-index: 0 !important;
+    user-select: none !important;
+    box-sizing: border-box !important;
+    touch-action: manipulation !important;
+    appearance: none !important;
+    text-overflow: ellipsis !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.instafn-scan-btn:hover {
+    background-color: rgb(var(--ig-colors-button-secondary-background--hover)) !important;
+}
+
+/* Modal styles */
+.instafn-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.instafn-modal {
+    width: min(600px, 90vw);
+    max-height: 85vh;
+    background: #ffffff;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Narrow variant for simple confirm dialogs */
+.instafn-modal.instafn-modal--narrow {
+    width: min(380px, 92vw);
+}
+
+.instafn-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    border-bottom: 1px solid #dbdbdb;
+    background: #ffffff;
+    position: relative;
+}
+
+.instafn-header-left {
+    display: inline-flex;
+    align-items: center;
+}
+
+.instafn-close {
+    position: absolute;
+    right: 16px;
+    cursor: pointer;
+    font-size: 24px;
+    line-height: 1;
+    border: none;
+    background: transparent;
+    color: #262626;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.instafn-modal-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: #262626;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.instafn-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0;
+    border-bottom: 1px solid #dbdbdb;
+    background: #ffffff;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+}
+
+.instafn-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.instafn-tab {
+    padding: 16px 20px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #8e8e8e;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    transition: all 0.2s;
+}
+
+.instafn-tab.active {
+    color: #f5f5f5;
+    border-bottom-color: #f5f5f5;
+}
+
+.instafn-tab:hover {
+    background: #fafafa;
+}
+
+.instafn-content {
+    padding: 0;
+    overflow: auto;
+    max-height: 60vh;
+    background: #ffffff;
+}
+
+.instafn-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.instafn-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #fafafa;
+    transition: background-color 0.2s;
+}
+
+.instafn-item:hover {
+    background: #fafafa;
+}
+
+.instafn-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.instafn-item img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #fafafa;
+}
+
+.instafn-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.instafn-item-username {
+    font-weight: 600;
+    font-size: 14px;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.instafn-item-name {
+    font-size: 14px;
+    color: #8e8e8e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.instafn-item a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.instafn-item a:hover {
+    text-decoration: underline;
+}
+
+.instafn-item-username a {
+    color: #ffffff !important;
+}
+
+.instafn-follow-btn {
+    background: #0095f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 16px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    transition: background-color 0.2s;
+}
+
+.instafn-follow-btn:hover {
+    background: #0081d6;
+}
+
+.instafn-follow-btn.following {
+    background: #dbdbdb;
+    color: #262626;
+}
+
+.instafn-follow-btn.following:hover {
+    background: #c7c7c7;
+}
+
+.instafn-empty {
+    color: #8e8e8e;
+    font-style: italic;
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Modal content styles */
+.instafn-modal-description {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    color: #8e8e8e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.4;
+}
+
+.instafn-warning-box {
+    margin-bottom: 20px;
+    padding: 12px;
+    background: #fef7e0;
+    border: 1px solid #f5e6a3;
+    border-radius: 8px;
+    color: #8e6e00;
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.4;
+}
+
+.instafn-loading-text {
+    margin: 0;
+    font-size: 14px;
+    color: #8e8e8e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.instafn-error-icon {
+    margin-bottom: 20px;
+    color: #ed4956;
+    font-size: 48px;
+}
+
+.instafn-error-title {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #262626;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.instafn-error-message {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    color: #8e8e8e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.4;
+}
+
+.instafn-button-container {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.instafn-primary-button {
+    background: #0095f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    transition: background-color 0.2s;
+}
+
+.instafn-primary-button:hover {
+    background: #0081d6;
+}
+
+.instafn-secondary-button {
+    background: #363636;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    transition: background-color 0.2s;
+}
+
+.instafn-secondary-button:hover {
+    background: #333333;
+}
+
+.instafn-loading-container {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.instafn-loading-spinner {
+    margin-bottom: 20px;
+}
+
+.instafn-loading-spinner svg {
+    width: 32px;
+    height: 32px;
+    margin: 0 auto;
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+    .instafn-scan-btn {
+        background-color: rgb(var(--ig-colors-button-secondary-background)) !important;
+        color: rgb(var(--ig-primary-text)) !important;
+    }
+
+    .instafn-scan-btn:hover {
+        background-color: rgb(var(--ig-colors-button-secondary-background--hover)) !important;
+    }
+
+    .instafn-modal-overlay {
+        background: rgba(0, 0, 0, 0.75);
+    }
+
+    .instafn-modal {
+        background: #262626;
+        border-color: #363636;
+    }
+
+    .instafn-modal-header {
+        background: #262626;
+        border-bottom-color: #363636;
+    }
+
+    .instafn-modal-title {
+        color: #f5f5f5;
+    }
+
+    .instafn-close {
+        color: #f5f5f5;
+    }
+
+    .instafn-tabs {
+        background: #262626;
+        border-bottom-color: #363636;
+    }
+
+    .instafn-tab {
+        color: #8e8e8e;
+    }
+
+    .instafn-tab.active {
+        color: #f5f5f5;
+        border-bottom-color: #f5f5f5;
+    }
+
+    .instafn-tab:hover {
+        background: #1a1a1a;
+    }
+
+    .instafn-content {
+        background: #262626;
+    }
+
+    .instafn-item {
+        border-bottom-color: #363636;
+    }
+
+    .instafn-item:hover {
+        background: #1a1a1a;
+    }
+
+    .instafn-item img {
+        background: #363636;
+    }
+
+    .instafn-item-username {
+        color: #f5f5f5;
+    }
+
+    .instafn-item-name {
+        color: #8e8e8e;
+    }
+
+    .instafn-item-username a {
+        color: #f5f5f5 !important;
+    }
+
+    .instafn-follow-btn.following {
+        background: #363636;
+        color: #f5f5f5;
+    }
+
+    .instafn-follow-btn.following:hover {
+        background: #404040;
+    }
+
+    .instafn-empty {
+        color: #8e8e8e;
+    }
+
+    /* Additional dark mode styles for modal content */
+    #instafn-start-scan {
+        background: #0095f6;
+    }
+
+    #instafn-start-scan:hover {
+        background: #0081d6;
+    }
+
+    .instafn-modal h3 {
+        color: #f5f5f5 !important;
+    }
+
+    .instafn-modal p {
+        color: #a8a8a8 !important;
+    }
+
+    .instafn-modal-description {
+        color: #a8a8a8 !important;
+    }
+
+    .instafn-loading-text {
+        color: #a8a8a8 !important;
+    }
+
+    .instafn-error-title {
+        color: #f5f5f5 !important;
+    }
+
+    .instafn-error-message {
+        color: #a8a8a8 !important;
+    }
+
+    /* Dark mode for previous results box */
+    .instafn-modal div[style*="background: #f8f9fa"] {
+        background: #1a1a1a !important;
+        border-color: #262626 !important;
+    }
+
+    .instafn-modal div[style*="background: #f8f9fa"] h4 {
+        color: #f5f5f5 !important;
+    }
+
+    .instafn-modal div[style*="background: #f8f9fa"] div {
+        color: #a8a8a8 !important;
+    }
+
+    .instafn-modal div[style*="background: #f8f9fa"] span {
+        color: #f5f5f5 !important;
+    }
+
+    /* Dark mode for warning boxes */
+    .instafn-modal div[style*="background: #fef7e0"] {
+        background: #2d1f00 !important;
+        border-color: #4a3a00 !important;
+        color: #f5d76e !important;
+    }
+
+    .instafn-modal div[style*="background: #fff3cd"] {
+        background: #2d1f00 !important;
+        border-color: #4a3a00 !important;
+        color: #f5d76e !important;
+    }
+
+    .instafn-warning-box {
+        background: #2d1f00 !important;
+        border-color: #4a3a00 !important;
+        color: #f5d76e !important;
+    }
+
+    /* Dark mode for view previous button */
+    #instafn-view-previous {
+        background: #363636 !important;
+        color: white !important;
+    }
+
+    #instafn-view-previous:hover {
+        background: #333333 !important;
+    }
+
+    .instafn-secondary-button {
+        background: #363636 !important;
+        color: white !important;
+    }
+
+    .instafn-secondary-button:hover {
+        background: #333333 !important;
+    }
+}
