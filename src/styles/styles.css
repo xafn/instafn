@@ -81,11 +81,12 @@
 .instafn-modal {
     width: min(600px, 90vw);
     max-height: 85vh;
-    background: #ffffff;
-    border-radius: 24px;
+    background: rgb(var(--ig-elevated-background));
+    border-radius: var(--igds-dialog-border-radius);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border: 1px solid rgb(var(--ig-separator));
 }
 
 /* Narrow variant for simple confirm dialogs */
@@ -98,8 +99,8 @@
     align-items: center;
     justify-content: center;
     padding: 20px 16px;
-    border-bottom: 1px solid #dbdbdb;
-    background: #ffffff;
+    border-bottom: 1px solid rgba(var(--ig-primary-text), 0.1);
+    background: rgb(var(--ig-elevated-background));
     position: relative;
 }
 
@@ -116,27 +117,32 @@
     line-height: 1;
     border: none;
     background: transparent;
-    color: #262626;
+    color: rgb(var(--ig-primary-icon));
     width: 32px;
     height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.instafn-close:hover {
+    color: rgb(var(--ig-secondary-text));
 }
 
 .instafn-modal-title {
-    font-weight: 600;
-    font-size: 16px;
-    color: #262626;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: var(--font-weight-system-semibold);
+    font-size: var(--system-16-font-size);
+    color: rgb(var(--ig-primary-text));
+    font-family: var(--font-family-system);
 }
 
 .instafn-tabs {
     display: flex;
     gap: 0;
     padding: 0;
-    border-bottom: 1px solid #dbdbdb;
-    background: #ffffff;
+    border-bottom: 1px solid rgba(var(--ig-primary-text), 0.1);
+    background: rgb(var(--ig-elevated-background));
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -152,29 +158,29 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    color: #8e8e8e;
+    font-size: var(--system-14-font-size);
+    font-weight: var(--font-weight-system-semibold);
+    color: rgb(var(--ig-secondary-text));
     border-bottom: 2px solid transparent;
     white-space: nowrap;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-family-system);
     transition: all 0.2s;
 }
 
 .instafn-tab.active {
-    color: #f5f5f5;
-    border-bottom-color: #f5f5f5;
+    color: rgb(var(--ig-primary-text));
+    border-bottom-color: rgb(var(--ig-primary-text));
 }
 
 .instafn-tab:hover {
-    background: #fafafa;
+    background: rgb(var(--ig-highlight-background));
 }
 
 .instafn-content {
     padding: 0;
     overflow: auto;
     max-height: 60vh;
-    background: #ffffff;
+    background: rgb(var(--ig-elevated-background));
 }
 
 .instafn-list {
@@ -188,12 +194,12 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    border-bottom: 1px solid #fafafa;
+    border-bottom: 1px solid rgba(var(--ig-primary-text), 0.1);
     transition: background-color 0.2s;
 }
 
 .instafn-item:hover {
-    background: #fafafa;
+    background: rgb(var(--ig-highlight-background));
 }
 
 .instafn-item-left {
@@ -208,7 +214,7 @@
     height: 44px;
     border-radius: 50%;
     object-fit: cover;
-    background: #fafafa;
+    background: rgb(var(--ig-secondary-background));
 }
 
 .instafn-item-info {
@@ -218,16 +224,16 @@
 }
 
 .instafn-item-username {
-    font-weight: 600;
-    font-size: 14px;
-    color: #ffffff;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-weight: var(--font-weight-system-semibold);
+    font-size: var(--system-14-font-size);
+    color: rgb(var(--ig-primary-text));
+    font-family: var(--font-family-system);
 }
 
 .instafn-item-name {
-    font-size: 14px;
-    color: #8e8e8e;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: var(--system-14-font-size);
+    color: rgb(var(--ig-secondary-text));
+    font-family: var(--font-family-system);
 }
 
 .instafn-item a {
@@ -240,91 +246,91 @@
 }
 
 .instafn-item-username a {
-    color: #ffffff !important;
+    color: rgb(var(--ig-primary-text)) !important;
 }
 
 .instafn-follow-btn {
-    background: #0095f6;
-    color: white;
+    background: rgb(var(--ig-primary-button));
+    color: rgb(var(--ig-text-on-color));
     border: none;
     border-radius: 8px;
     padding: 7px 16px;
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: var(--font-weight-system-semibold);
+    font-size: var(--system-14-font-size);
     cursor: pointer;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-family-system);
     transition: background-color 0.2s;
 }
 
 .instafn-follow-btn:hover {
-    background: #0081d6;
+    background: rgb(var(--ig-primary-button-hover));
 }
 
 .instafn-follow-btn.following {
-    background: #dbdbdb;
-    color: #262626;
+    background: rgb(var(--ig-secondary-button-background));
+    color: rgb(var(--ig-secondary-button));
 }
 
 .instafn-follow-btn.following:hover {
-    background: #c7c7c7;
+    background: rgba(var(--ig-primary-text), 0.1);
 }
 
 .instafn-empty {
-    color: #8e8e8e;
+    color: rgb(var(--ig-secondary-text));
     font-style: italic;
     text-align: center;
     padding: 40px 20px;
-    font-size: 14px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: var(--system-14-font-size);
+    font-family: var(--font-family-system);
 }
 
 /* Modal content styles */
 .instafn-modal-description {
     margin: 0 0 16px 0;
-    font-size: 14px;
-    color: #8e8e8e;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: var(--system-14-font-size);
+    color: rgb(var(--ig-secondary-text));
+    font-family: var(--font-family-system);
     line-height: 1.4;
 }
 
 .instafn-warning-box {
     margin-bottom: 20px;
     padding: 12px;
-    background: #fef7e0;
-    border: 1px solid #f5e6a3;
+    background: rgb(var(--ig-temporary-highlight));
+    border: 1px solid rgb(var(--ig-separator));
     border-radius: 8px;
-    color: #8e6e00;
-    font-size: 13px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: rgb(var(--ig-secondary-text));
+    font-size: var(--system-13-font-size);
+    font-family: var(--font-family-system);
     line-height: 1.4;
 }
 
 .instafn-loading-text {
     margin: 0;
-    font-size: 14px;
-    color: #8e8e8e;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: var(--system-14-font-size);
+    color: rgb(var(--ig-secondary-text));
+    font-family: var(--font-family-system);
 }
 
 .instafn-error-icon {
     margin-bottom: 20px;
-    color: #ed4956;
+    color: rgb(var(--ig-error-or-destructive));
     font-size: 48px;
 }
 
 .instafn-error-title {
     margin: 0 0 12px 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #262626;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: var(--system-18-font-size);
+    font-weight: var(--font-weight-system-semibold);
+    color: rgb(var(--ig-primary-text));
+    font-family: var(--font-family-system);
 }
 
 .instafn-error-message {
     margin: 0 0 24px 0;
-    font-size: 14px;
-    color: #8e8e8e;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: var(--system-14-font-size);
+    color: rgb(var(--ig-secondary-text));
+    font-family: var(--font-family-system);
     line-height: 1.4;
 }
 
@@ -336,37 +342,37 @@
 }
 
 .instafn-primary-button {
-    background: #0095f6;
-    color: white;
+    background: rgb(var(--ig-primary-button));
+    color: rgb(var(--ig-text-on-color));
     border: none;
     border-radius: 8px;
     padding: 12px 24px;
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: var(--font-weight-system-semibold);
+    font-size: var(--system-14-font-size);
     cursor: pointer;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-family-system);
     transition: background-color 0.2s;
 }
 
 .instafn-primary-button:hover {
-    background: #0081d6;
+    background: rgb(var(--ig-primary-button-hover));
 }
 
 .instafn-secondary-button {
-    background: #363636;
-    color: white;
+    background: rgb(var(--ig-secondary-button-background));
+    color: rgb(var(--ig-secondary-button));
     border: none;
     border-radius: 8px;
     padding: 12px 24px;
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: var(--font-weight-system-semibold);
+    font-size: var(--system-14-font-size);
     cursor: pointer;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font-family-system);
     transition: background-color 0.2s;
 }
 
 .instafn-secondary-button:hover {
-    background: #333333;
+    background: rgba(var(--ig-primary-text), 0.1);
 }
 
 .instafn-loading-container {
@@ -382,188 +388,6 @@
     width: 32px;
     height: 32px;
     margin: 0 auto;
-}
-
-/* Dark mode styles */
-@media (prefers-color-scheme: dark) {
-    .instafn-scan-btn {
-        background-color: rgb(var(--ig-colors-button-secondary-background)) !important;
-        color: rgb(var(--ig-primary-text)) !important;
-    }
-
-    .instafn-scan-btn:hover {
-        background-color: rgb(var(--ig-colors-button-secondary-background--hover)) !important;
-    }
-
-    .instafn-modal-overlay {
-        background: rgba(0, 0, 0, 0.75);
-    }
-
-    .instafn-modal {
-        background: #262626;
-        border-color: #363636;
-    }
-
-    .instafn-modal-header {
-        background: #262626;
-        border-bottom-color: #363636;
-    }
-
-    .instafn-modal-title {
-        color: #f5f5f5;
-    }
-
-    .instafn-close {
-        color: #f5f5f5;
-    }
-
-    .instafn-tabs {
-        background: #262626;
-        border-bottom-color: #363636;
-    }
-
-    .instafn-tab {
-        color: #8e8e8e;
-    }
-
-    .instafn-tab.active {
-        color: #f5f5f5;
-        border-bottom-color: #f5f5f5;
-    }
-
-    .instafn-tab:hover {
-        background: #1a1a1a;
-    }
-
-    .instafn-content {
-        background: #262626;
-    }
-
-    .instafn-item {
-        border-bottom-color: #363636;
-    }
-
-    .instafn-item:hover {
-        background: #1a1a1a;
-    }
-
-    .instafn-item img {
-        background: #363636;
-    }
-
-    .instafn-item-username {
-        color: #f5f5f5;
-    }
-
-    .instafn-item-name {
-        color: #8e8e8e;
-    }
-
-    .instafn-item-username a {
-        color: #f5f5f5 !important;
-    }
-
-    .instafn-follow-btn.following {
-        background: #363636;
-        color: #f5f5f5;
-    }
-
-    .instafn-follow-btn.following:hover {
-        background: #404040;
-    }
-
-    .instafn-empty {
-        color: #8e8e8e;
-    }
-
-    /* Additional dark mode styles for modal content */
-    #instafn-start-scan {
-        background: #0095f6;
-    }
-
-    #instafn-start-scan:hover {
-        background: #0081d6;
-    }
-
-    .instafn-modal h3 {
-        color: #f5f5f5 !important;
-    }
-
-    .instafn-modal p {
-        color: #a8a8a8 !important;
-    }
-
-    .instafn-modal-description {
-        color: #a8a8a8 !important;
-    }
-
-    .instafn-loading-text {
-        color: #a8a8a8 !important;
-    }
-
-    .instafn-error-title {
-        color: #f5f5f5 !important;
-    }
-
-    .instafn-error-message {
-        color: #a8a8a8 !important;
-    }
-
-    /* Dark mode for previous results box */
-    .instafn-modal div[style*="background: #f8f9fa"] {
-        background: #1a1a1a !important;
-        border-color: #262626 !important;
-    }
-
-    .instafn-modal div[style*="background: #f8f9fa"] h4 {
-        color: #f5f5f5 !important;
-    }
-
-    .instafn-modal div[style*="background: #f8f9fa"] div {
-        color: #a8a8a8 !important;
-    }
-
-    .instafn-modal div[style*="background: #f8f9fa"] span {
-        color: #f5f5f5 !important;
-    }
-
-    /* Dark mode for warning boxes */
-    .instafn-modal div[style*="background: #fef7e0"] {
-        background: #2d1f00 !important;
-        border-color: #4a3a00 !important;
-        color: #f5d76e !important;
-    }
-
-    .instafn-modal div[style*="background: #fff3cd"] {
-        background: #2d1f00 !important;
-        border-color: #4a3a00 !important;
-        color: #f5d76e !important;
-    }
-
-    .instafn-warning-box {
-        background: #2d1f00 !important;
-        border-color: #4a3a00 !important;
-        color: #f5d76e !important;
-    }
-
-    /* Dark mode for view previous button */
-    #instafn-view-previous {
-        background: #363636 !important;
-        color: white !important;
-    }
-
-    #instafn-view-previous:hover {
-        background: #333333 !important;
-    }
-
-    .instafn-secondary-button {
-        background: #363636 !important;
-        color: white !important;
-    }
-
-    .instafn-secondary-button:hover {
-        background: #333333 !important;
-    }
 }
 
 /* Video scrubber styles - outside dark mode to avoid conflicts */
@@ -622,212 +446,31 @@
 
 /* Style video player controls to match Instagram's UI font */
 .instafn-video-scrubber-enabled video::-webkit-media-controls {
-    font-family:
-        var(--font-family-system),
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Helvetica,
-        Arial,
-        sans-serif !important;
-    font-size: 14px !important;
-    font-weight: 400 !important;
-}
-
-.instafn-video-scrubber-enabled video::-webkit-media-controls-panel {
-    font-family:
-        var(--font-family-system),
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Helvetica,
-        Arial,
-        sans-serif !important;
-    font-size: 12px !important;
-    font-weight: 400 !important;
-}
-
-.instafn-video-scrubber-enabled video::-webkit-media-controls-current-time-display,
-.instafn-video-scrubber-enabled video::-webkit-media-controls-time-remaining-display {
-    font-family:
-        var(--font-family-system),
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Helvetica,
-        Arial,
-        sans-serif !important;
-    font-size: 14px !important;
-    font-weight: 400 !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-}
-
-/* Style video captions/subtitles if they exist */
-.instafn-video-scrubber-enabled video::cue {
-    font-family:
-        var(--font-family-system),
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Helvetica,
-        Arial,
-        sans-serif !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
-    color: white !important;
-    background-color: rgba(0, 0, 0, 0.7) !important;
-    padding: 4px 8px !important;
-    border-radius: 4px !important;
+    font-family: var(--font-family-system) !important;
+    font-size: var(--system-12-font-size) !important;
+    color: rgb(var(--ig-text-on-color)) !important;
 }
 
 /* Show controls on hover */
-.instafn-video-scrubber-enabled div[role="button"]:hover video,
-.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video,
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video {
-    --ig-video-controls-opacity: 1 !important;
-}
-
-.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls,
-.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video::-webkit-media-controls,
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls {
+.instafn-video-scrubber-enabled video:hover::-webkit-media-controls {
     opacity: 1 !important;
 }
 
-.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls-panel,
-.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video::-webkit-media-controls-panel,
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-panel {
+.instafn-video-scrubber-enabled video:hover::-webkit-media-controls-panel {
     opacity: 1 !important;
 }
 
-.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls-play-button,
-.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video::-webkit-media-controls-play-button,
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-play-button {
+.instafn-video-scrubber-enabled video:hover::-webkit-media-controls-play-button {
     opacity: 1 !important;
 }
 
-.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls-timeline,
-.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video::-webkit-media-controls-timeline,
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-timeline {
+.instafn-video-scrubber-enabled video:hover::-webkit-media-controls-timeline {
     opacity: 1 !important;
 }
 
-.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls-current-time-display,
-.instafn-video-scrubber-enabled
-    div[data-testid="video-container"]:hover
-    video::-webkit-media-controls-current-time-display,
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-current-time-display,
-.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls-time-remaining-display,
-.instafn-video-scrubber-enabled
-    div[data-testid="video-container"]:hover
-    video::-webkit-media-controls-time-remaining-display,
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-time-remaining-display {
+.instafn-video-scrubber-enabled video:hover::-webkit-media-controls-current-time-display,
+.instafn-video-scrubber-enabled video:hover::-webkit-media-controls-time-remaining-display {
     opacity: 1 !important;
-}
-
-/* Override Instagram's default video control hiding */
-.instafn-video-scrubber-enabled video[controls] {
-    --ig-video-controls-opacity: 1 !important;
-}
-
-.instafn-video-scrubber-enabled video[controls]::-webkit-media-controls {
-    display: flex !important;
-    opacity: 1 !important;
-}
-
-/* Additional overrides for Instagram's video control hiding */
-.instafn-video-scrubber-enabled video::-webkit-media-controls-enclosure {
-    display: flex !important;
-    opacity: 1 !important;
-}
-
-.instafn-video-scrubber-enabled video::-webkit-media-controls-overlay-play-button {
-    display: flex !important;
-    opacity: 1 !important;
-}
-
-/* Specific styling for reels - Instagram uses different structure for reels */
-.instafn-video-scrubber-enabled div[data-testid="reel"] video {
-    --ig-video-controls-opacity: 0 !important;
-    transition: --ig-video-controls-opacity 0.3s ease !important;
-}
-
-.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls {
-    display: flex !important;
-    opacity: 0 !important;
-    z-index: 10001 !important;
-    pointer-events: auto !important;
-    transition: opacity 0.3s ease !important;
-}
-
-.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-panel {
-    display: flex !important;
-    opacity: 0 !important;
-    z-index: 10001 !important;
-    pointer-events: auto !important;
-    transition: opacity 0.3s ease !important;
-}
-
-.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-play-button {
-    display: flex !important;
-    opacity: 0 !important;
-    z-index: 10001 !important;
-    pointer-events: auto !important;
-    transition: opacity 0.3s ease !important;
-}
-
-.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-timeline {
-    display: flex !important;
-    opacity: 0 !important;
-    z-index: 10001 !important;
-    pointer-events: auto !important;
-    transition: opacity 0.3s ease !important;
-    height: 4px !important;
-    border-radius: 2px !important;
-}
-
-.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-current-time-display,
-.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-time-remaining-display {
-    display: flex !important;
-    opacity: 0 !important;
-    z-index: 10001 !important;
-    pointer-events: auto !important;
-    transition: opacity 0.3s ease !important;
-}
-
-/* Show reel controls on hover */
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video {
-    --ig-video-controls-opacity: 1 !important;
-}
-
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls {
-    opacity: 1 !important;
-}
-
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-panel {
-    opacity: 1 !important;
-}
-
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-play-button {
-    opacity: 1 !important;
-}
-
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-timeline {
-    opacity: 1 !important;
-}
-
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-current-time-display,
-.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls-time-remaining-display {
-    opacity: 1 !important;
-}
-
-/* Force reel controls to be above Instagram overlays */
-.instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls-enclosure {
-    z-index: 10001 !important;
-    pointer-events: auto !important;
 }
 
 /* Additional reel-specific selectors that Instagram might use */
@@ -880,51 +523,69 @@
 .instafn-video-scrubber-enabled div[role="button"] video::-webkit-media-controls,
 .instafn-video-scrubber-enabled div[data-testid="video-container"] video::-webkit-media-controls,
 .instafn-video-scrubber-enabled div[data-testid="reel"] video::-webkit-media-controls {
+    display: flex !important;
+    opacity: 0 !important;
     z-index: 9999 !important;
     pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
 }
 
-/* Handle Instagram's audio control button that overlays videos */
-.instafn-video-scrubber-enabled button[aria-label="Toggle audio"] {
-    z-index: 9998 !important;
+.instafn-video-scrubber-enabled div[role="button"]:hover video::-webkit-media-controls,
+.instafn-video-scrubber-enabled div[data-testid="video-container"]:hover video::-webkit-media-controls,
+.instafn-video-scrubber-enabled div[data-testid="reel"]:hover video::-webkit-media-controls {
+    opacity: 1 !important;
+}
+
+/* Additional selectors for different Instagram video containers */
+.instafn-video-scrubber-enabled div[data-visualcompletion="media-video"] video::-webkit-media-controls,
+.instafn-video-scrubber-enabled div[data-visualcompletion="media-video"]:hover video::-webkit-media-controls {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 9999 !important;
     pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
 }
 
-/* Ensure the audio button doesn't block video controls */
-.instafn-video-scrubber-enabled button[aria-label="Toggle audio"] + div,
-.instafn-video-scrubber-enabled div[data-instancekey] button[aria-label="Toggle audio"] {
-    z-index: 9998 !important;
+.instafn-video-scrubber-enabled div[data-visualcompletion="media-video"]:hover video::-webkit-media-controls {
+    opacity: 1 !important;
+}
+
+/* Handle Instagram's dynamic video containers */
+.instafn-video-scrubber-enabled [data-testid="video-container"] video::-webkit-media-controls,
+.instafn-video-scrubber-enabled [data-testid="reel"] video::-webkit-media-controls,
+.instafn-video-scrubber-enabled [data-testid="post-video"] video::-webkit-media-controls {
+    display: flex !important;
+    opacity: 0 !important;
+    z-index: 9999 !important;
     pointer-events: auto !important;
+    transition: opacity 0.3s ease !important;
 }
 
-/* Make sure video controls are above the audio button */
-.instafn-video-scrubber-enabled video::-webkit-media-controls {
-    z-index: 10000 !important;
-    pointer-events: auto !important;
+.instafn-video-scrubber-enabled [data-testid="video-container"]:hover video::-webkit-media-controls,
+.instafn-video-scrubber-enabled [data-testid="reel"]:hover video::-webkit-media-controls,
+.instafn-video-scrubber-enabled [data-testid="post-video"]:hover video::-webkit-media-controls {
+    opacity: 1 !important;
 }
 
-/* Specific handling for the audio control container */
-.instafn-video-scrubber-enabled div[data-instancekey] {
-    pointer-events: none !important;
-}
+/* Ensure controls work on mobile devices */
+@media (max-width: 768px) {
+    .instafn-video-scrubber-enabled video::-webkit-media-controls {
+        opacity: 1 !important;
+        display: flex !important;
+    }
 
-.instafn-video-scrubber-enabled div[data-instancekey] button[aria-label="Toggle audio"] {
-    pointer-events: auto !important;
-    z-index: 9998 !important;
-}
+    .instafn-video-scrubber-enabled video::-webkit-media-controls-panel {
+        opacity: 1 !important;
+        display: flex !important;
+    }
 
-/* Ensure video controls can receive clicks even when audio button is present */
-.instafn-video-scrubber-enabled video::-webkit-media-controls-panel {
-    z-index: 10000 !important;
-    pointer-events: auto !important;
-}
+    .instafn-video-scrubber-enabled video::-webkit-media-controls-play-button {
+        opacity: 1 !important;
+        display: flex !important;
+    }
 
-.instafn-video-scrubber-enabled video::-webkit-media-controls-timeline {
-    z-index: 10000 !important;
-    pointer-events: auto !important;
-}
-
-.instafn-video-scrubber-enabled video::-webkit-media-controls-play-button {
-    z-index: 10000 !important;
-    pointer-events: auto !important;
+    .instafn-video-scrubber-enabled video::-webkit-media-controls-timeline {
+        opacity: 1 !important;
+        display: flex !important;
+    }
 }
