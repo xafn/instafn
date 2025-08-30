@@ -4,112 +4,12 @@ import {
   extractUsernames,
   computeFollowAnalysis,
   getProfilePicData,
+  fetchUserInfo,
+  updateFriendship,
+  getProfileUsernameFromPath,
+  getMeCached,
+  isOwnProfile,
 } from "./followAnalyzer.js";
-
-// Inject styles onto page
-export function injectStyles() {
-  if (document.getElementById("instafn-scan-styles")) return;
-  const marker = document.createElement("div");
-  marker.id = "instafn-scan-styles";
-  marker.style.display = "none";
-  document.head.appendChild(marker);
-}
-
-// Fetch user info from Instagram API
-export async function fetchUserInfo(username) {
-  try {
-    const response = await fetch(
-      `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(
-        username
-      )}`,
-      {
-        credentials: "include",
-        headers: {
-          "X-IG-App-ID": "936619743392459",
-          "X-Requested-With": "XMLHttpRequest",
-        },
-      }
-    );
-    if (!response.ok) {
-      if (response.status === 429) {
-        throw new Error(
-          "Rate limited by Instagram (HTTP 429). Please try again in 15–60 minutes."
-        );
-      }
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const info = await response.json();
-    const user = info?.data?.user;
-    if (user) {
-      return {
-        username: user.username,
-        fullName: user.full_name,
-        profilePic: user.profile_pic_url_hd || user.profile_pic_url,
-        isPrivate: user.is_private,
-        isVerified: user.is_verified,
-        isFollowed: user.followed_by_viewer,
-        isFollowing: user.follows_viewer,
-        id: user.id || user.pk,
-      };
-    }
-  } catch (_) {}
-  return null;
-}
-
-// Follow/unfollow user helpers
-export async function followUser(userId) {
-  const csrftoken = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) ||
-    [])[1];
-  const headers = {
-    Accept: "application/json",
-    "Content-Type": "application/x-www-form-urlencoded",
-    "X-Requested-With": "XMLHttpRequest",
-    Referer: "https://www.instagram.com/",
-    "X-IG-App-ID": "936619743392459",
-    "X-ASBD-ID": "129477",
-    "X-IG-WWW-Claim": "0",
-  };
-  if (csrftoken) headers["X-CSRFToken"] = decodeURIComponent(csrftoken);
-
-  const response = await fetch(
-    `https://www.instagram.com/api/v1/friendships/create/${userId}/`,
-    {
-      method: "POST",
-      credentials: "include",
-      headers,
-      body: "target_user_id=" + userId,
-    }
-  );
-  if (!response.ok) throw new Error(`Follow failed: ${response.status}`);
-  return response.json();
-}
-
-export async function unfollowUser(userId) {
-  const csrftoken = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) ||
-    [])[1];
-  const headers = {
-    Accept: "application/json",
-    "Content-Type": "application/x-www-form-urlencoded",
-    "X-Requested-With": "XMLHttpRequest",
-    Referer: "https://www.instagram.com/",
-    "X-IG-App-ID": "936619743392459",
-    "X-ASBD-ID": "129477",
-    "X-IG-WWW-Claim": "0",
-  };
-  if (csrftoken) headers["X-CSRFToken"] = decodeURIComponent(csrftoken);
-
-  const response = await fetch(
-    `https://www.instagram.com/api/v1/friendships/destroy/${userId}/`,
-    {
-      method: "POST",
-      credentials: "include",
-      headers,
-      body: "target_user_id=" + userId,
-    }
-  );
-  if (!response.ok) throw new Error(`Unfollow failed: ${response.status}`);
-  return response.json();
-}
 
 // Create follow button component
 export function createFollowButton(
@@ -145,8 +45,8 @@ export function createFollowButton(
         btn.disabled = false;
         return;
       }
-      if (isFollowing) await unfollowUser(userId);
-      else await followUser(userId);
+      if (isFollowing) await updateFriendship(userId, false);
+      else await updateFriendship(userId, true);
 
       const wasFollowing = btn.classList.contains("following");
       btn.classList.toggle("following", !wasFollowing);
@@ -164,34 +64,6 @@ export function createFollowButton(
     }
   });
   return btn;
-}
-
-// Helper functions
-function getProfileUsernameFromPath() {
-  const m = location.pathname.match(/^\/([^\/]+)\/?$/);
-  return m ? m[1] : null;
-}
-
-let cachedMe = null;
-let meCacheTime = 0;
-const ME_CACHE_DURATION = 5 * 60 * 1000;
-
-async function getMeCached() {
-  const now = Date.now();
-  if (cachedMe && now - meCacheTime < ME_CACHE_DURATION) return cachedMe;
-  try {
-    cachedMe = await getCurrentUser();
-    meCacheTime = now;
-  } catch (_) {}
-  return cachedMe;
-}
-
-async function isOwnProfile() {
-  const username = getProfileUsernameFromPath();
-  if (!username) return false;
-  const me = await getMeCached();
-  if (!me) return false;
-  return username.toLowerCase() === me.username.toLowerCase();
 }
 
 // Create and inject scan button
@@ -251,7 +123,6 @@ export async function injectScanButton() {
       .forEach((el) => el.remove());
     return;
   }
-  injectStyles();
   const placed = placeScanButton();
   if (placed) return;
   if (scanBtnObserver) return;
@@ -263,20 +134,24 @@ export async function injectScanButton() {
 
 // Modal functionality
 export async function openModal(titleText) {
-  injectStyles();
   const overlay = document.createElement("div");
   overlay.className = "instafn-modal-overlay";
+
   const modal = document.createElement("div");
   modal.className = "instafn-modal";
+
   const header = document.createElement("div");
   header.className = "instafn-modal-header";
+
   const headerLeft = document.createElement("div");
   headerLeft.className = "instafn-header-left";
+
   const title = document.createElement("div");
   title.className = "instafn-modal-title";
   title.textContent = titleText || "Follow analysis";
   headerLeft.appendChild(title);
   const close = document.createElement("button");
+
   close.className = "instafn-close";
   close.innerHTML = `<svg aria-label="Close" class="x1lliihq x1n2onr6 x5n08af" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24">
     <title>Close</title>
@@ -316,7 +191,7 @@ export function confirmWithModal({
       tabs.style.display = "none";
 
       content.innerHTML = `
-        <div style="text-align: center; padding: 28px 20px;">
+        <div style="text-align: center; padding: 20px 20px 28px 20px;">
           <p class="instafn-modal-description">${message}</p>
           <div class="instafn-button-container">
             <button class="instafn-secondary-button" data-instafn-cancel>${cancelText}</button>
@@ -507,7 +382,18 @@ export async function renderAnalysisInto(container, data) {
       const list = document.createElement("div");
       list.className = "instafn-list";
       const userInfos = items.map((username) => {
-        const cachedData = getProfilePicData(username, data.cachedSnapshot);
+        // First try to get data from cached snapshot
+        let cachedData = getProfilePicData(username, data.cachedSnapshot);
+
+        // If no cached data, try to find it in current scan results
+        if (!cachedData) {
+          const follower = data.followers?.find((u) => u.username === username);
+          const following = data.following?.find(
+            (u) => u.username === username
+          );
+          cachedData = follower || following;
+        }
+
         const info = cachedData
           ? {
               username: cachedData.username,
@@ -541,7 +427,13 @@ export async function renderAnalysisInto(container, data) {
         const img = document.createElement("img");
         img.alt = "";
         img.loading = "lazy";
-        if (info?.profilePic) img.src = info.profilePic;
+        // Use profile picture if available, otherwise fall back to default Instagram avatar
+        if (info?.profilePic) {
+          img.src = info.profilePic;
+        } else {
+          img.src =
+            "data:image/jpeg;base64,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";
+        }
         const itemInfo = document.createElement("div");
         itemInfo.className = "instafn-item-info";
         const usernameEl = document.createElement("div");

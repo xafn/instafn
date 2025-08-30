@@ -9,14 +9,15 @@ import {
   interceptFollows,
 } from "./modules/interceptors.js";
 
-import { scanFollowersAndFollowing } from "./modules/followAnalyzer.js";
+import {
+  scanFollowersAndFollowing,
+  fetchUserInfo,
+} from "./modules/followAnalyzer.js";
 
 import {
-  injectStyles,
   injectScanButton,
   openModal,
   createFollowButton,
-  fetchUserInfo,
   renderScanButton,
   confirmWithModal,
 } from "./modules/ui.js";

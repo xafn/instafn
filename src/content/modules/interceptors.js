@@ -68,23 +68,39 @@ export function interceptLikes() {
     "dblclick",
     async (e) => {
       if (e.isTrusted === false) return;
+
+      // More specific selector to only target actual post images
       const postImage = e.target.closest(
-        'div[role="button"] img, div[role="button"], img'
+        'article div[role="button"] img, article div[role="button"]'
       );
 
       if (postImage) {
+        // Additional check to ensure this is actually a post image, not just any clickable div
+        const postContainer = postImage.closest('article div[role="button"]');
+        if (!postContainer) return;
+
+        // Check if this container has post-specific attributes or structure
+        const hasPostStructure =
+          postContainer.querySelector(
+            'img[alt*="photo"], img[alt*="image"], img[alt*="post"]'
+          ) ||
+          postContainer.querySelector("video") ||
+          postContainer.closest('article[data-testid="post"]') ||
+          postContainer.closest('div[data-testid="post"]');
+
+        if (!hasPostStructure) return;
+
         e.stopImmediatePropagation();
         e.stopPropagation();
         e.preventDefault();
 
-        const postContainer = e.target.closest('div[role="button"]');
         if (postContainer && postContainer.querySelector("video")) {
           const evt = new MouseEvent("dblclick", {
             bubbles: true,
             cancelable: true,
             view: window,
           });
-          (postContainer || postImage).dispatchEvent(evt);
+          postContainer.dispatchEvent(evt);
           return;
         }
 
@@ -105,7 +121,7 @@ export function interceptLikes() {
             cancelable: true,
             view: window,
           });
-          (postContainer || postImage).dispatchEvent(evt);
+          postContainer.dispatchEvent(evt);
           return;
         }
 
@@ -118,13 +134,12 @@ export function interceptLikes() {
           : confirm("Do you want to like this post?");
 
         if (confirmed) {
-          const target = postImage.closest('div[role="button"]') || postImage;
           const evt = new MouseEvent("dblclick", {
             bubbles: true,
             cancelable: true,
             view: window,
           });
-          target.dispatchEvent(evt);
+          postContainer.dispatchEvent(evt);
         }
         return false;
       }

@@ -1,5 +1,76 @@
 const SCAN_STORAGE_KEY = "instafn_follow_snapshot";
 
+// Instagram API utility functions
+export async function fetchUserInfo(username) {
+  try {
+    const response = await fetch(
+      `https://www.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(
+        username
+      )}`,
+      {
+        credentials: "include",
+        headers: {
+          "X-IG-App-ID": "936619743392459",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      }
+    );
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error(
+          "Rate limited by Instagram (HTTP 429). Please try again in 2-3 hours."
+        );
+      }
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const info = await response.json();
+    const user = info?.data?.user;
+    if (user) {
+      return {
+        username: user.username,
+        fullName: user.full_name,
+        profilePic: user.profile_pic_url_hd || user.profile_pic_url,
+        isPrivate: user.is_private,
+        isVerified: user.is_verified,
+        isFollowed: user.followed_by_viewer,
+        isFollowing: user.follows_viewer,
+        id: user.id || user.pk,
+      };
+    }
+  } catch (_) {}
+  return null;
+}
+
+export async function updateFriendship(userId, friendshipAction) {
+  const csrftoken = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) ||
+    [])[1];
+  const headers = {
+    Accept: "application/json",
+    "Content-Type": "application/x-www-form-urlencoded",
+    "X-Requested-With": "XMLHttpRequest",
+    Referer: "https://www.instagram.com/",
+    "X-IG-App-ID": "936619743392459",
+    "X-ASBD-ID": "129477",
+    "X-IG-WWW-Claim": "0",
+  };
+  if (csrftoken) headers["X-CSRFToken"] = decodeURIComponent(csrftoken);
+
+  const action = friendshipAction ? "create" : "destroy";
+  const actionText = friendshipAction ? "follow" : "unfollow";
+
+  const response = await fetch(
+    `https://www.instagram.com/api/v1/friendships/${action}/${userId}/`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers,
+      body: "target_user_id=" + userId,
+    }
+  );
+  if (!response.ok) throw new Error(`${actionText} failed: ${response.status}`);
+  return response.json();
+}
+
 async function safeFetchJson(url) {
   const csrftoken = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) ||
     [])[1];
@@ -62,6 +133,34 @@ export async function getCurrentUser() {
   } catch (_) {}
 
   throw new Error("Instafn: Could not determine current user");
+}
+
+// Helper utility functions
+export function getProfileUsernameFromPath() {
+  const m = location.pathname.match(/^\/([^\/]+)\/?$/);
+  return m ? m[1] : null;
+}
+
+let cachedMe = null;
+let meCacheTime = 0;
+const ME_CACHE_DURATION = 5 * 60 * 1000;
+
+export async function getMeCached() {
+  const now = Date.now();
+  if (cachedMe && now - meCacheTime < ME_CACHE_DURATION) return cachedMe;
+  try {
+    cachedMe = await getCurrentUser();
+    meCacheTime = now;
+  } catch (_) {}
+  return cachedMe;
+}
+
+export async function isOwnProfile() {
+  const username = getProfileUsernameFromPath();
+  if (!username) return false;
+  const me = await getMeCached();
+  if (!me) return false;
+  return username.toLowerCase() === me.username.toLowerCase();
 }
 
 export async function fetchFriendList(userId, type) {
@@ -267,6 +366,8 @@ export async function computeFollowAnalysis() {
     lostFollowers,
     hasPrev: !!prev.current,
     cachedSnapshot: snapshot,
+    followers,
+    following,
   };
 }
 
