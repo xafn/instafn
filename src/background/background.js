@@ -9,6 +9,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     confirmStoryQuickReactions: true,
     confirmStoryReplies: true,
     activateFollowAnalyzer: true,
+    enableVideoScrubber: false,
   };
 
   chrome.storage.sync.get(defaults, (current) => {

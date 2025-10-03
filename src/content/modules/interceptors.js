@@ -3,6 +3,8 @@ export function interceptLikes() {
     "click",
     async (e) => {
       if (e.isTrusted === false) return;
+      // Ignore clicks that are part of a double-click
+      if (e.detail > 1) return;
       const heartSvg = e.target.closest(
         'svg[aria-label="Like"], svg[aria-label="Unlike"]'
       );
@@ -63,86 +65,80 @@ export function interceptLikes() {
     true
   );
 
-  // Detect double clicks on post images
+  // Detect double clicks anywhere inside a post
   document.addEventListener(
     "dblclick",
     async (e) => {
       if (e.isTrusted === false) return;
+      e.stopImmediatePropagation();
+      e.stopPropagation();
+      e.preventDefault();
 
-      // More specific selector to only target actual post images
-      const postImage = e.target.closest(
-        'article div[role="button"] img, article div[role="button"]'
-      );
+      const article = e.target.closest("article");
+      if (!article) return;
 
-      if (postImage) {
-        // Additional check to ensure this is actually a post image, not just any clickable div
-        const postContainer = postImage.closest('article div[role="button"]');
-        if (!postContainer) return;
+      const isStory =
+        window.location.pathname.includes("/stories/") ||
+        article.querySelector('[data-testid="story"], [aria-label*="story"]');
+      const isReel =
+        window.location.pathname.includes("/reels/") ||
+        article.querySelector('[data-testid="reel"], [aria-label*="reel"]');
+      if (isStory || isReel) return;
 
-        // Check if this container has post-specific attributes or structure
-        const hasPostStructure =
-          postContainer.querySelector(
-            'img[alt*="photo"], img[alt*="image"], img[alt*="post"]'
-          ) ||
-          postContainer.querySelector("video") ||
-          postContainer.closest('article[data-testid="post"]') ||
-          postContainer.closest('div[data-testid="post"]');
+      // Find the like button inside the article
+      const likeBtn = article
+        .querySelector('svg[aria-label="Like"]')
+        ?.closest('button, [role="button"], a, div[role="button"]');
 
-        if (!hasPostStructure) return;
-
-        e.stopImmediatePropagation();
-        e.stopPropagation();
-        e.preventDefault();
-
-        if (postContainer && postContainer.querySelector("video")) {
-          const evt = new MouseEvent("dblclick", {
-            bubbles: true,
-            cancelable: true,
-            view: window,
+      if (!likeBtn) {
+        // If already liked, show a modal to inform the user
+        if (await window.Instafn?.confirmWithModal) {
+          await window.Instafn.confirmWithModal({
+            title: "Already liked",
+            message: "You have already liked this post.",
+            confirmText: "OK",
+            cancelText: "",
           });
-          postContainer.dispatchEvent(evt);
-          return;
-        }
-
-        const isStory =
-          window.location.pathname.includes("/stories/") ||
-          (postContainer &&
-            (postContainer.querySelector('[data-testid="story"]') ||
-              postContainer.querySelector('[aria-label*="story"]')));
-        const isReel =
-          window.location.pathname.includes("/reels/") ||
-          (postContainer &&
-            (postContainer.querySelector('[data-testid="reel"]') ||
-              postContainer.querySelector('[aria-label*="reel"]')));
-
-        if (isStory || isReel) {
-          const evt = new MouseEvent("dblclick", {
-            bubbles: true,
-            cancelable: true,
-            view: window,
-          });
-          postContainer.dispatchEvent(evt);
-          return;
-        }
-
-        const confirmed = (await window.Instafn?.confirmWithModal)
-          ? await window.Instafn.confirmWithModal({
-              title: "Confirm like",
-              message: "Do you want to like this post?",
-              confirmText: "Like",
-            })
-          : confirm("Do you want to like this post?");
-
-        if (confirmed) {
-          const evt = new MouseEvent("dblclick", {
-            bubbles: true,
-            cancelable: true,
-            view: window,
-          });
-          postContainer.dispatchEvent(evt);
+        } else {
+          alert("You have already liked this post.");
         }
         return false;
       }
+
+      const confirmed = (await window.Instafn?.confirmWithModal)
+        ? await window.Instafn.confirmWithModal({
+            title: "Confirm like",
+            message: "Do you want to like this post?",
+            confirmText: "Like",
+          })
+        : confirm("Do you want to like this post?");
+
+      if (confirmed) {
+        const eventInit = {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          view: window,
+        };
+        const pointerDown = new PointerEvent("pointerdown", {
+          ...eventInit,
+          pointerType: "mouse",
+        });
+        const mouseDown = new MouseEvent("mousedown", eventInit);
+        const mouseUp = new MouseEvent("mouseup", eventInit);
+        const clickEvt = new MouseEvent("click", eventInit);
+        try {
+          likeBtn.dispatchEvent(pointerDown);
+        } catch (_) {}
+        try {
+          likeBtn.dispatchEvent(mouseDown);
+        } catch (_) {}
+        try {
+          likeBtn.dispatchEvent(mouseUp);
+        } catch (_) {}
+        likeBtn.dispatchEvent(clickEvt);
+      }
+      return false;
     },
     true
   );
