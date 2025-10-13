@@ -32,7 +32,7 @@
 /* Scan button styles */
 .instafn-scan-btn {
     background-color: rgb(var(--ig-colors-button-secondary-background)) !important;
-    color: rgb(var(--ig-primary-text)) !important;
+    color: rgb(var(--ig-colors-button-secondary-text)) !important;
     border: none !important;
     padding: 0 16px !important;
     margin: 0 !important;
@@ -87,6 +87,18 @@
     flex-direction: column;
     overflow: hidden;
     border: 1px solid rgb(var(--ig-separator));
+    animation: instafn-modal-zoom-in 0.1s cubic-bezier(0.08, 0.52, 0.52, 1);
+}
+
+@keyframes instafn-modal-zoom-in {
+    0% {
+        opacity: 0;
+        transform: scale(1.2);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 /* Narrow variant for simple confirm dialogs */
@@ -250,8 +262,8 @@
 }
 
 .instafn-follow-btn {
-    background: rgb(var(--ig-primary-button));
-    color: rgb(var(--ig-text-on-color));
+    background: rgb(var(--ig-colors-button-primary-background));
+    color: rgb(var(--ig-colors-button-primary-text));
     border: none;
     border-radius: 8px;
     padding: 7px 16px;
@@ -263,7 +275,16 @@
 }
 
 .instafn-follow-btn:hover {
-    background: rgb(var(--ig-primary-button-hover));
+    background: rgb(var(--ig-colors-button-primary-background--hover));
+}
+
+.instafn-follow-btn:active {
+    background: rgb(var(--ig-colors-button-primary-background--pressed));
+}
+
+.instafn-follow-btn:disabled {
+    background: rgb(var(--ig-colors-button-primary-background--disabled));
+    color: rgb(var(--ig-colors-button-primary-text--disabled));
 }
 
 .instafn-follow-btn.following {
@@ -342,8 +363,8 @@
 }
 
 .instafn-primary-button {
-    background: rgb(var(--ig-primary-button));
-    color: rgb(var(--ig-text-on-color));
+    background: rgb(var(--ig-colors-button-primary-background));
+    color: rgb(var(--ig-colors-button-primary-text));
     border: none;
     border-radius: 8px;
     padding: 12px 24px;
@@ -355,7 +376,16 @@
 }
 
 .instafn-primary-button:hover {
-    background: rgb(var(--ig-primary-button-hover));
+    background: rgb(var(--ig-colors-button-primary-background--hover));
+}
+
+.instafn-primary-button:active {
+    background: rgb(var(--ig-colors-button-primary-background--pressed));
+}
+
+.instafn-primary-button:disabled {
+    background: rgb(var(--ig-colors-button-primary-background--disabled));
+    color: rgb(var(--ig-colors-button-primary-text--disabled));
 }
 
 .instafn-secondary-button {
@@ -389,4 +419,3 @@
     height: 32px;
     margin: 0 auto;
 }
-

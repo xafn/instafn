@@ -90,21 +90,6 @@ export function interceptLikes() {
         .querySelector('svg[aria-label="Like"]')
         ?.closest('button, [role="button"], a, div[role="button"]');
 
-      if (!likeBtn) {
-        // If already liked, show a modal to inform the user
-        if (await window.Instafn?.confirmWithModal) {
-          await window.Instafn.confirmWithModal({
-            title: "Already liked",
-            message: "You have already liked this post.",
-            confirmText: "OK",
-            cancelText: "",
-          });
-        } else {
-          alert("You have already liked this post.");
-        }
-        return false;
-      }
-
       const confirmed = (await window.Instafn?.confirmWithModal)
         ? await window.Instafn.confirmWithModal({
             title: "Confirm like",

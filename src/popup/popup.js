@@ -9,6 +9,8 @@ const DEFAULTS = {
   confirmStoryReplies: true,
   activateFollowAnalyzer: true,
   enableVideoScrubber: false,
+  enableProfilePicPopup: true,
+  enableHighlightPopup: true,
 };
 
 document.addEventListener("DOMContentLoaded", () => {

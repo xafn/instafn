@@ -23,6 +23,7 @@ import {
 } from "./modules/ui.js";
 
 import { initVideoScrubber } from "./modules/videoScrubber.js";
+import { injectProfilePicPopupOverlay } from "./profilePicPopup.js";
 
 // Initialize user info cache
 window.userInfoCache = new Map();
@@ -65,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
       confirmStoryReplies: true,
       activateFollowAnalyzer: true,
       enableVideoScrubber: false,
+      enableProfilePicPopup: true, // ADD THIS default
     },
     (settings) => {
       if (settings.confirmLikes) interceptLikes();
@@ -76,6 +78,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Initialize video scrubber
       initVideoScrubber(settings.enableVideoScrubber);
+      // NEW: Enable profile pic popup and highlight popup
+      injectProfilePicPopupOverlay(
+        settings.enableProfilePicPopup,
+        settings.enableHighlightPopup
+      );
 
       // If this is a fresh install, enable follow analyzer by default
       chrome.storage.sync.get(null, (allSettings) => {
