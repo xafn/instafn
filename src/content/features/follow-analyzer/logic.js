@@ -1,6 +1,5 @@
 const SCAN_STORAGE_KEY = "instafn_follow_snapshot";
 
-// Instagram API utility functions
 export async function fetchUserInfo(username) {
   try {
     const response = await fetch(
@@ -135,7 +134,6 @@ export async function getCurrentUser() {
   throw new Error("Instafn: Could not determine current user");
 }
 
-// Helper utility functions
 export function getProfileUsernameFromPath() {
   const m = location.pathname.match(/^\/([^\/]+)\/?$/);
   return m ? m[1] : null;
@@ -218,7 +216,6 @@ export async function fetchFriendList(userId, type) {
   return results;
 }
 
-// Cache profile pics to avoid rate limits
 async function convertImageToBase64(url) {
   try {
     const response = await fetch(url);

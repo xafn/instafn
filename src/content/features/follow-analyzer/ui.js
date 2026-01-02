@@ -1,22 +1,27 @@
 import {
-  getCurrentUser,
   loadPreviousSnapshot,
   extractUsernames,
   computeFollowAnalysis,
   getProfilePicData,
   fetchUserInfo,
   updateFriendship,
-  getProfileUsernameFromPath,
   getMeCached,
   isOwnProfile,
-} from "./followAnalyzer.js";
+} from "./logic.js";
+import { injectStylesheet } from "../../utils/styleLoader.js";
 
-// Create follow button component
+const ensureStyles = () =>
+  injectStylesheet(
+    "content/features/follow-analyzer/follow-analyzer.css",
+    "instafn-follow-analyzer"
+  );
+
 export function createFollowButton(
   username,
   isFollowing,
   cachedUserData = null
 ) {
+  ensureStyles();
   const btn = document.createElement("button");
   btn.className = `instafn-follow-btn ${isFollowing ? "following" : ""}`;
   btn.textContent = isFollowing ? "Following" : "Follow";
@@ -66,12 +71,11 @@ export function createFollowButton(
   return btn;
 }
 
-// Create and inject scan button
 function createScanButton() {
   const btn = document.createElement("button");
   btn.className = "instafn-scan-btn";
   btn.title = "Scan followers/following";
-  btn.innerHTML = `Follow analysis`;
+  btn.innerHTML = `Follow analyzer`;
   btn.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -89,51 +93,163 @@ function createScanButton() {
 
 function placeScanButton() {
   if (window.top !== window.self) return false;
+
+  const existingBtn = document.querySelector(".instafn-scan-btn");
+  if (existingBtn) {
+    const editProfileLink = document.querySelector('a[href="/accounts/edit/"]');
+    if (editProfileLink) {
+      return true;
+    }
+    existingBtn.closest(".html-div")?.remove();
+    return false;
+  }
+
   const editProfileLink = document.querySelector('a[href="/accounts/edit/"]');
   if (!editProfileLink) return false;
-  const editProfileWrapper = editProfileLink.closest(".html-div");
-  if (!editProfileWrapper) return false;
-  const actionContainer = editProfileWrapper.parentElement;
+
+  let actionContainer = editProfileLink.closest(".html-div");
+  if (!actionContainer) return false;
+  actionContainer = actionContainer.parentElement;
+  if (!actionContainer) return false;
+
+  let currentContainer = actionContainer;
+  let depth = 0;
+  while (currentContainer && depth < 5) {
+    if (currentContainer.querySelector('a[href="/archive/stories/"]')) {
+      actionContainer = currentContainer;
+      break;
+    }
+    currentContainer = currentContainer.parentElement;
+    depth++;
+  }
+
+  if (!actionContainer) {
+    actionContainer = editProfileLink.closest("section");
+    if (!actionContainer) {
+      actionContainer = editProfileLink.parentElement;
+      while (actionContainer && actionContainer.children.length < 2) {
+        actionContainer = actionContainer.parentElement;
+      }
+    }
+  }
+
   if (!actionContainer) return false;
   if (actionContainer.querySelector(".instafn-scan-btn")) return true;
+
+  const existingWrappers = Array.from(
+    actionContainer.querySelectorAll(".html-div")
+  ).filter((wrapper) => wrapper.querySelector(".instafn-scan-btn"));
+  existingWrappers.forEach((wrapper) => wrapper.remove());
+
+  actionContainer.classList.add("instafn-button-container");
+
+  const btnWrapper = document.createElement("div");
+  btnWrapper.className =
+    "html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl x9f619 xjbqb8w x78zum5 x15mokao x1ga7v0g x16uus16 xbiv7yw x1n2onr6 x1plvlek xryxfnj x1iyjqo2 x2lwn1j xeuugli xdt5ytf xqjyukv x1qjc9v5 x1oa3qoh x1nhvcw1";
+
   const btn = createScanButton();
-  actionContainer.appendChild(btn);
+  btnWrapper.appendChild(btn);
+  actionContainer.appendChild(btnWrapper);
   return true;
 }
 
-let scanBtnObserver = null;
+function ensureFloatingScanFab() {
+  ensureStyles();
+  if (document.querySelector(".instafn-scan-fab")) return;
 
-export async function injectScanButton() {
-  const pathOk = /^\/[A-Za-z0-9._]+\/?$/.test(window.location.pathname);
-  if (!pathOk) return;
-  const me = await getMeCached();
-  if (me && !(await isOwnProfile())) {
-    document
-      .querySelectorAll(".instafn-scan-btn, .instafn-scan-fab")
-      .forEach((el) => el.remove());
-    return;
-  }
+  const fab = document.createElement("button");
+  fab.className = "instafn-scan-btn instafn-scan-fab";
+  fab.style.position = "fixed";
+  fab.style.bottom = "16px";
+  fab.style.right = "16px";
+  fab.style.zIndex = "100000";
+  fab.style.boxShadow = "0 8px 24px rgba(0,0,0,0.24)";
+  fab.style.padding = "0 16px";
+  fab.style.height = "40px";
+  fab.textContent = "Follow analyzer";
 
-  const settings = await new Promise((resolve) => {
-    chrome.storage.sync.get({ activateFollowAnalyzer: true }, resolve);
+  fab.addEventListener("click", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const overlay = await openModal("Follow analysis");
+      const content = overlay.querySelector(".instafn-content");
+      await renderScanButton(content, overlay);
+    } catch (err) {
+      alert("Failed to open modal: " + (err?.message || String(err)));
+    }
   });
-  if (!settings.activateFollowAnalyzer) {
-    document
-      .querySelectorAll(".instafn-scan-btn, .instafn-scan-fab")
-      .forEach((el) => el.remove());
-    return;
-  }
-  const placed = placeScanButton();
-  if (placed) return;
-  if (scanBtnObserver) return;
-  scanBtnObserver = new MutationObserver(() => {
-    placeScanButton();
-  });
-  scanBtnObserver.observe(document.body, { childList: true, subtree: true });
+
+  document.body.appendChild(fab);
 }
 
-// Modal functionality
+function clearFloatingScanFab() {
+  document.querySelectorAll(".instafn-scan-fab").forEach((el) => el.remove());
+}
+
+let scanBtnObserver = null;
+let isInjecting = false;
+
+export async function injectScanButton() {
+  ensureStyles();
+  if (isInjecting) return;
+  if (document.querySelector(".instafn-scan-btn")) return;
+
+  const pathOk = /^\/[A-Za-z0-9._]+\/?$/.test(window.location.pathname);
+  if (!pathOk) return;
+
+  isInjecting = true;
+  try {
+    const me = await getMeCached();
+    if (me && !(await isOwnProfile())) {
+      document
+        .querySelectorAll(".instafn-scan-btn, .instafn-scan-fab")
+        .forEach((el) => el.remove());
+      return;
+    }
+
+    const settings = await new Promise((resolve) => {
+      chrome.storage.sync.get({ activateFollowAnalyzer: true }, resolve);
+    });
+    if (!settings.activateFollowAnalyzer) {
+      document
+        .querySelectorAll(".instafn-scan-btn, .instafn-scan-fab")
+        .forEach((el) => el.remove());
+      return;
+    }
+
+    if (document.querySelector(".instafn-scan-btn")) {
+      return;
+    }
+
+    const placed = placeScanButton();
+    if (placed) {
+      clearFloatingScanFab();
+      return;
+    }
+
+    // Fallback: inject a floating button if the in-feed placement fails
+    ensureFloatingScanFab();
+
+    if (scanBtnObserver) return;
+    scanBtnObserver = new MutationObserver(() => {
+      if (!document.querySelector(".instafn-scan-btn")) {
+        const ok = placeScanButton();
+        if (ok) {
+          clearFloatingScanFab();
+        } else {
+          ensureFloatingScanFab();
+        }
+      }
+    });
+    scanBtnObserver.observe(document.body, { childList: true, subtree: true });
+  } finally {
+    isInjecting = false;
+  }
+}
+
 export async function openModal(titleText) {
+  ensureStyles();
   const overlay = document.createElement("div");
   overlay.className = "instafn-modal-overlay";
 
@@ -148,7 +264,7 @@ export async function openModal(titleText) {
 
   const title = document.createElement("div");
   title.className = "instafn-modal-title";
-  title.textContent = titleText || "Follow analysis";
+  title.textContent = titleText || "Follow analyzer";
   headerLeft.appendChild(title);
   const close = document.createElement("button");
 
@@ -174,13 +290,13 @@ export async function openModal(titleText) {
   return overlay;
 }
 
-// Confirmation modal
 export function confirmWithModal({
   title = "Confirm",
   message = "Are you sure?",
   confirmText = "Confirm",
   cancelText = "Cancel",
 } = {}) {
+  ensureStyles();
   return new Promise(async (resolve) => {
     try {
       const overlay = await openModal(title);
@@ -232,8 +348,8 @@ export function confirmWithModal({
   });
 }
 
-// Render scan button interface
 export async function renderScanButton(content, overlay) {
+  ensureStyles();
   const prevData = await loadPreviousSnapshot();
   const hasPreviousScan =
     prevData.current &&
@@ -350,8 +466,8 @@ export async function renderScanButton(content, overlay) {
   });
 }
 
-// Render analysis results
 export async function renderAnalysisInto(container, data) {
+  ensureStyles();
   const tabDefs = [
     { key: "dontFollowYouBack", label: "Don't follow you back" },
     { key: "youDontFollowBack", label: "You don't follow back" },
@@ -382,10 +498,7 @@ export async function renderAnalysisInto(container, data) {
       const list = document.createElement("div");
       list.className = "instafn-list";
       const userInfos = items.map((username) => {
-        // First try to get data from cached snapshot
         let cachedData = getProfilePicData(username, data.cachedSnapshot);
-
-        // If no cached data, try to find it in current scan results
         if (!cachedData) {
           const follower = data.followers?.find((u) => u.username === username);
           const following = data.following?.find(
@@ -427,7 +540,6 @@ export async function renderAnalysisInto(container, data) {
         const img = document.createElement("img");
         img.alt = "";
         img.loading = "lazy";
-        // Use profile picture if available, otherwise fall back to default Instagram avatar
         if (info?.profilePic) {
           img.src = info.profilePic;
         } else {

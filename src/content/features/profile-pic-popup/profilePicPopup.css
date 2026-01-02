@@ -1,0 +1,32 @@
+.instafn-pfp-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.86);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.instafn-pfp-image {
+    max-width: 92vw;
+    max-height: 80vh;
+    border-radius: 0;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    background: #222;
+}
+
+.instafn-pfp-close {
+    position: absolute;
+    top: 32px;
+    right: 40px;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 1000001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

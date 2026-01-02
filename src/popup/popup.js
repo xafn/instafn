@@ -5,12 +5,23 @@ const DEFAULTS = {
   confirmComment: true,
   confirmCall: true,
   confirmFollow: true,
+  confirmReposts: true,
   confirmStoryQuickReactions: true,
   confirmStoryReplies: true,
   activateFollowAnalyzer: true,
   enableVideoScrubber: false,
   enableProfilePicPopup: true,
   enableHighlightPopup: true,
+  hideRecentSearches: true,
+  disableTabSearch: false,
+  disableTabExplore: false,
+  disableTabReels: false,
+  disableTabMessages: false,
+  disableTabNotifications: false,
+  disableTabCreate: false,
+  disableTabProfile: false,
+  disableTabMoreFromMeta: false,
+  hideDMPopup: false,
 };
 
 document.addEventListener("DOMContentLoaded", () => {

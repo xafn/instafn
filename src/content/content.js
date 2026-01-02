@@ -1,5 +1,3 @@
-// Main content script - orchestrates all Instafn functionality
-
 import {
   interceptStoryQuickReactions,
   interceptStoryReplies,
@@ -7,48 +5,69 @@ import {
   interceptComments,
   interceptCalls,
   interceptFollows,
-} from "./modules/interceptors.js";
+  interceptReposts,
+  interceptTypingReceipts,
+} from "./features/action-interceptors/index.js";
 
 import {
   scanFollowersAndFollowing,
   fetchUserInfo,
-} from "./modules/followAnalyzer.js";
-
-import {
   injectScanButton,
   openModal,
   createFollowButton,
   renderScanButton,
   confirmWithModal,
-} from "./modules/ui.js";
+} from "./features/follow-analyzer/index.js";
 
-import { initVideoScrubber } from "./modules/videoScrubber.js";
-import { injectProfilePicPopupOverlay } from "./profilePicPopup.js";
+import { initVideoScrubber } from "./features/video-scrubber/videoScrubber.js";
+import { injectProfilePicPopupOverlay } from "./features/profile-pic-popup/index.js";
+import { initHideRecentSearches } from "./features/search-cleaner/index.js";
+import { initTabDisabler } from "./features/tab-disabler/index.js";
+import {
+  initDMPopupHider,
+  enableDMDebug,
+} from "./features/dm-popup-hider/index.js";
+import { injectBrandingStyles } from "./features/branding/index.js";
 
 // Initialize user info cache
 window.userInfoCache = new Map();
+
+// Initialize global Instafn object immediately (before DOMContentLoaded)
+window.Instafn = window.Instafn || {};
+
+// Add enableDMDebug placeholder (will be replaced when module loads)
+window.Instafn.enableDMDebug = function() {
+  console.log(
+    "[Instafn] DM debug function not yet loaded. Please wait a moment and try again, or reload the page."
+  );
+};
 
 // Inject the story blocking script into the page context
 function injectStoryBlocking() {
   try {
     const script = document.createElement("script");
-    script.src = chrome.runtime.getURL("content/storyblocking.js");
-    (document.head || document.documentElement).appendChild(script);
+    script.src = chrome.runtime.getURL(
+      "content/features/story-blocking/storyblocking.js"
+    );
+    const target =
+      document.head || document.documentElement || document.body || null;
+    if (target) {
+      target.appendChild(script);
+    } else {
+      document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+          const readyTarget =
+            document.head || document.documentElement || document.body;
+          if (readyTarget) {
+            readyTarget.appendChild(script);
+          }
+        },
+        { once: true }
+      );
+    }
   } catch (err) {
     console.error("Instafn: Error injecting story blocking script:", err);
-  }
-}
-
-// Inject CSS styles
-function injectPageStyles() {
-  try {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.type = "text/css";
-    link.href = chrome.runtime.getURL("styles/styles.css");
-    (document.head || document.documentElement).appendChild(link);
-  } catch (err) {
-    console.error("Instafn: Error injecting styles:", err);
   }
 }
 
@@ -62,27 +81,51 @@ document.addEventListener("DOMContentLoaded", () => {
       confirmComments: true,
       confirmCalls: true,
       confirmFollow: true,
+      confirmReposts: true,
       confirmStoryQuickReactions: true,
       confirmStoryReplies: true,
       activateFollowAnalyzer: true,
       enableVideoScrubber: false,
-      enableProfilePicPopup: true, // ADD THIS default
+      enableProfilePicPopup: true,
+      enableHighlightPopup: true, // ADD THIS default
+      blockTypingReceipts: true,
+      hideRecentSearches: true,
+      disableTabSearch: false,
+      disableTabExplore: false,
+      disableTabReels: false,
+      disableTabMessages: false,
+      disableTabNotifications: false,
+      disableTabCreate: false,
+      disableTabProfile: false,
+      disableTabMoreFromMeta: false,
+      hideDMPopup: false,
     },
     (settings) => {
       if (settings.confirmLikes) interceptLikes();
       if (settings.confirmComments) interceptComments();
       if (settings.confirmCalls) interceptCalls();
       if (settings.confirmFollow) interceptFollows();
+      if (settings.confirmReposts) interceptReposts();
       if (settings.confirmStoryQuickReactions) interceptStoryQuickReactions();
       if (settings.confirmStoryReplies) interceptStoryReplies();
+      if (settings.blockTypingReceipts) interceptTypingReceipts();
 
       // Initialize video scrubber
       initVideoScrubber(settings.enableVideoScrubber);
-      // NEW: Enable profile pic popup and highlight popup
+      // Enable profile pic popup and highlight popup
       injectProfilePicPopupOverlay(
         settings.enableProfilePicPopup,
         settings.enableHighlightPopup
       );
+
+      // Hide recent searches in the search overlay if enabled
+      initHideRecentSearches(settings.hideRecentSearches);
+
+      // Initialize tab disabler
+      initTabDisabler(settings);
+
+      // Initialize DM popup hider
+      initDMPopupHider(settings);
 
       // If this is a fresh install, enable follow analyzer by default
       chrome.storage.sync.get(null, (allSettings) => {
@@ -97,8 +140,8 @@ document.addEventListener("DOMContentLoaded", () => {
 // Inject story blocking immediately
 injectStoryBlocking();
 
-// Inject styles immediately
-injectPageStyles();
+// Inject branding styles immediately
+injectBrandingStyles();
 
 // Listen for messages from the bridge script
 window.addEventListener("message", async (event) => {
@@ -115,14 +158,24 @@ window.addEventListener("message", async (event) => {
 });
 
 // Inject scan button when on profile pages
+let scanButtonTimeout = null;
 function checkAndInjectScanButton() {
   const path = window.location.pathname;
   const isProfilePage = path.match(/^\/([^\/]+)\/?$/);
 
   if (isProfilePage) {
-    setTimeout(() => injectScanButton(), 500);
-    setTimeout(() => injectScanButton(), 1500);
-    setTimeout(() => injectScanButton(), 3000);
+    // Clear any pending timeout to avoid multiple calls
+    if (scanButtonTimeout) {
+      clearTimeout(scanButtonTimeout);
+    }
+    // Try immediately first
+    injectScanButton();
+    // Then try again after a delay if the button wasn't placed (e.g., DOM not ready)
+    scanButtonTimeout = setTimeout(() => {
+      if (!document.querySelector(".instafn-scan-btn")) {
+        injectScanButton();
+      }
+    }, 1000);
   }
 }
 
@@ -139,15 +192,54 @@ new MutationObserver(() => {
 // Initial check
 checkAndInjectScanButton();
 
-// Listen for storage changes to update video scrubber
+// Listen for storage changes to update video scrubber and search cleaner
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync" && changes.enableVideoScrubber) {
     initVideoScrubber(changes.enableVideoScrubber.newValue);
   }
+  if (namespace === "sync" && changes.hideRecentSearches) {
+    initHideRecentSearches(changes.hideRecentSearches.newValue);
+  }
+  // Handle tab disabler settings changes
+  if (namespace === "sync") {
+    const tabDisablerKeys = [
+      "disableTabSearch",
+      "disableTabExplore",
+      "disableTabReels",
+      "disableTabMessages",
+      "disableTabNotifications",
+      "disableTabCreate",
+      "disableTabProfile",
+      "disableTabMoreFromMeta",
+    ];
+    if (tabDisablerKeys.some((key) => key in changes)) {
+      chrome.storage.sync.get(
+        {
+          disableTabSearch: false,
+          disableTabExplore: false,
+          disableTabReels: false,
+          disableTabMessages: false,
+          disableTabNotifications: false,
+          disableTabCreate: false,
+          disableTabProfile: false,
+          disableTabMoreFromMeta: false,
+        },
+        (settings) => {
+          initTabDisabler(settings);
+        }
+      );
+    }
+    // Handle DM popup hider settings changes
+    if (changes.hideDMPopup) {
+      chrome.storage.sync.get({ hideDMPopup: false }, (settings) => {
+        initDMPopupHider(settings);
+      });
+    }
+  }
 });
 
-// Export functions for global access
-window.Instafn = {
+// Export functions for global access (add to existing object)
+Object.assign(window.Instafn, {
   scanFollowers: scanFollowersAndFollowing,
   injectScanButton,
   openModal,
@@ -155,4 +247,5 @@ window.Instafn = {
   fetchUserInfo,
   renderScanButton,
   confirmWithModal,
-};
+  enableDMDebug, // Debug function for DM popup hider
+});

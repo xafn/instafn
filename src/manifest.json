@@ -33,8 +33,11 @@
     "web_accessible_resources": [
         {
             "resources": [
-                "content/storyblocking.js",
-                "styles/styles.css"
+                "content/features/story-blocking/storyblocking.js",
+                "content/features/follow-analyzer/follow-analyzer.css",
+                "content/features/video-scrubber/videoScrubber.css",
+                "content/features/profile-pic-popup/profilePicPopup.css",
+                "content/features/branding/branding.css"
             ],
             "matches": [
                 "*://www.instagram.com/*"

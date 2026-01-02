@@ -1,0 +1,28 @@
+._ab8i span {
+  font-size: 0 !important;
+  position: relative !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+._ab8i span::before {
+  content: "💽 Instafn v0.0.1 by afn.im" !important;
+  font-size: 12px !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  text-transform: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  white-space: nowrap !important;
+  display: inline-block !important;
+  z-index: 1 !important;
+}
+
