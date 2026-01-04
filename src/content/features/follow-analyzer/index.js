@@ -1,9 +1,11 @@
 export {
   injectScanButton,
+  removeScanButton,
   openModal,
   createFollowButton,
   renderScanButton,
   confirmWithModal,
+  initFollowAnalyzerEarly,
 } from "./ui.js";
 export {
   fetchUserInfo,

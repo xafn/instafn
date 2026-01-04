@@ -16,6 +16,66 @@ const ensureStyles = () =>
     "instafn-follow-analyzer"
   );
 
+const INLINE_SCAN_BUTTON_SELECTOR = ".instafn-scan-btn:not(.instafn-scan-fab)";
+
+const isElementVisible = (el) => {
+  if (!el) return false;
+  const style = window.getComputedStyle(el);
+  if (style.display === "none" || style.visibility === "hidden") return false;
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+};
+
+function findProfileEditLink() {
+  const mainRoot =
+    document.querySelector('main[role="main"]') ||
+    document.querySelector("main") ||
+    document.body;
+
+  const candidates = Array.from(
+    mainRoot.querySelectorAll('a[href="/accounts/edit/"]')
+  );
+
+  return candidates.find(
+    (el) =>
+      !el.closest("nav") &&
+      !el.closest('[role="navigation"]') &&
+      isElementVisible(el)
+  );
+}
+
+function resolveActionContainer(editProfileLink) {
+  const candidates = [];
+
+  const htmlDivParent = editProfileLink.closest(".html-div");
+  if (htmlDivParent?.parentElement) {
+    candidates.push(htmlDivParent.parentElement);
+  }
+
+  const profileHeader =
+    editProfileLink.closest("header") ||
+    editProfileLink.closest("section") ||
+    editProfileLink.closest("main");
+
+  if (profileHeader) {
+    const archiveLink = profileHeader.querySelector('a[href="/archive/stories/"]');
+    const archiveContainer = archiveLink?.closest(".html-div")?.parentElement;
+    if (archiveContainer) candidates.push(archiveContainer);
+    const firstRow = profileHeader.querySelector(".html-div")?.parentElement;
+    if (firstRow) candidates.push(firstRow);
+    candidates.push(profileHeader);
+  }
+
+  candidates.push(editProfileLink.parentElement);
+
+  return candidates.find(
+    (candidate) =>
+      candidate &&
+      candidate.contains(editProfileLink) &&
+      !candidate.closest("nav,[role='navigation']")
+  );
+}
+
 export function createFollowButton(
   username,
   isFollowing,
@@ -94,9 +154,9 @@ function createScanButton() {
 function placeScanButton() {
   if (window.top !== window.self) return false;
 
-  const existingBtn = document.querySelector(".instafn-scan-btn");
+  const editProfileLink = findProfileEditLink();
+  const existingBtn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
   if (existingBtn) {
-    const editProfileLink = document.querySelector('a[href="/accounts/edit/"]');
     if (editProfileLink) {
       return true;
     }
@@ -104,37 +164,11 @@ function placeScanButton() {
     return false;
   }
 
-  const editProfileLink = document.querySelector('a[href="/accounts/edit/"]');
   if (!editProfileLink) return false;
 
-  let actionContainer = editProfileLink.closest(".html-div");
+  const actionContainer = resolveActionContainer(editProfileLink);
   if (!actionContainer) return false;
-  actionContainer = actionContainer.parentElement;
-  if (!actionContainer) return false;
-
-  let currentContainer = actionContainer;
-  let depth = 0;
-  while (currentContainer && depth < 5) {
-    if (currentContainer.querySelector('a[href="/archive/stories/"]')) {
-      actionContainer = currentContainer;
-      break;
-    }
-    currentContainer = currentContainer.parentElement;
-    depth++;
-  }
-
-  if (!actionContainer) {
-    actionContainer = editProfileLink.closest("section");
-    if (!actionContainer) {
-      actionContainer = editProfileLink.parentElement;
-      while (actionContainer && actionContainer.children.length < 2) {
-        actionContainer = actionContainer.parentElement;
-      }
-    }
-  }
-
-  if (!actionContainer) return false;
-  if (actionContainer.querySelector(".instafn-scan-btn")) return true;
+  if (actionContainer.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) return true;
 
   const existingWrappers = Array.from(
     actionContainer.querySelectorAll(".html-div")
@@ -189,22 +223,69 @@ function clearFloatingScanFab() {
 
 let scanBtnObserver = null;
 let isInjecting = false;
+let injectedStyleElement = null;
+
+function injectEarlyHideCSS() {
+  // Remove existing style if any
+  if (injectedStyleElement) {
+    injectedStyleElement.remove();
+    injectedStyleElement = null;
+  }
+
+  // Inject CSS early to prevent layout shift
+  // The button will be hidden until we confirm it's the user's own profile
+  const style = document.createElement("style");
+  style.id = "instafn-follow-analyzer-early";
+  style.textContent = `
+    .instafn-scan-btn:not(.instafn-scan-fab):not(.instafn-visible),
+    .instafn-scan-fab:not(.instafn-visible) {
+      display: none !important;
+    }
+    .instafn-scan-btn.instafn-visible,
+    .instafn-scan-fab.instafn-visible {
+      display: flex !important;
+    }
+  `;
+
+  const injectStyle = () => {
+    const target = document.head || document.documentElement || document.body;
+    if (target) {
+      if (!document.getElementById("instafn-follow-analyzer-early")) {
+        target.appendChild(style);
+        injectedStyleElement = style;
+      }
+      return true;
+    }
+    return false;
+  };
+
+  if (!injectStyle()) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", injectStyle, { once: true });
+      setTimeout(injectStyle, 0);
+    } else {
+      injectStyle();
+    }
+  }
+}
 
 export async function injectScanButton() {
   ensureStyles();
   if (isInjecting) return;
-  if (document.querySelector(".instafn-scan-btn")) return;
+  if (document.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) return;
 
   const pathOk = /^\/[A-Za-z0-9._]+\/?$/.test(window.location.pathname);
-  if (!pathOk) return;
+  if (!pathOk) {
+    removeScanButton();
+    return;
+  }
 
   isInjecting = true;
   try {
+    // Check if it's the user's own profile FIRST before doing anything
     const me = await getMeCached();
-    if (me && !(await isOwnProfile())) {
-      document
-        .querySelectorAll(".instafn-scan-btn, .instafn-scan-fab")
-        .forEach((el) => el.remove());
+    if (!me || !(await isOwnProfile())) {
+      removeScanButton();
       return;
     }
 
@@ -218,34 +299,71 @@ export async function injectScanButton() {
       return;
     }
 
-    if (document.querySelector(".instafn-scan-btn")) {
+    if (document.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) {
       return;
     }
 
     const placed = placeScanButton();
     if (placed) {
+      // Make button visible once placed
+      const btn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
+      if (btn) btn.classList.add("instafn-visible");
       clearFloatingScanFab();
       return;
     }
 
     // Fallback: inject a floating button if the in-feed placement fails
     ensureFloatingScanFab();
+    const fab = document.querySelector(".instafn-scan-fab");
+    if (fab) fab.classList.add("instafn-visible");
 
-    if (scanBtnObserver) return;
-    scanBtnObserver = new MutationObserver(() => {
-      if (!document.querySelector(".instafn-scan-btn")) {
-        const ok = placeScanButton();
-        if (ok) {
-          clearFloatingScanFab();
-        } else {
-          ensureFloatingScanFab();
+    if (!scanBtnObserver) {
+      scanBtnObserver = new MutationObserver(async () => {
+        // Always check if it's still the user's own profile
+        const me = await getMeCached();
+        if (!me || !(await isOwnProfile())) {
+          removeScanButton();
+          return;
         }
-      }
-    });
-    scanBtnObserver.observe(document.body, { childList: true, subtree: true });
+
+        const hasInline = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
+        if (!hasInline) {
+          const ok = placeScanButton();
+          if (ok) {
+            const btn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
+            if (btn) btn.classList.add("instafn-visible");
+            clearFloatingScanFab();
+          } else {
+            ensureFloatingScanFab();
+            const fab = document.querySelector(".instafn-scan-fab");
+            if (fab) fab.classList.add("instafn-visible");
+          }
+        }
+      });
+      scanBtnObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
   } finally {
     isInjecting = false;
   }
+}
+
+export function removeScanButton() {
+  document
+    .querySelectorAll(".instafn-scan-btn, .instafn-scan-fab")
+    .forEach((el) => el.remove());
+
+  if (scanBtnObserver) {
+    scanBtnObserver.disconnect();
+    scanBtnObserver = null;
+  }
+}
+
+// Export early initialization function
+export function initFollowAnalyzerEarly() {
+  injectEarlyHideCSS();
 }
 
 export async function openModal(titleText) {
@@ -411,6 +529,9 @@ export async function renderScanButton(content, overlay) {
         lostFollowers: prevData.current.lostFollowers || [],
         hasPrev: true,
         cachedSnapshot: prevData.current,
+        previousSnapshot: prevData.previous || prevData.current || null,
+        followers: prevData.current.followers || [],
+        following: prevData.current.following || [],
       };
       await renderAnalysisInto(content, mockData);
     });
@@ -468,6 +589,15 @@ export async function renderScanButton(content, overlay) {
 
 export async function renderAnalysisInto(container, data) {
   ensureStyles();
+  const currentFollowerSet = new Set(extractUsernames(data.followers || []));
+  const currentFollowingSet = new Set(extractUsernames(data.following || []));
+  const prevFollowerSet = new Set(
+    extractUsernames(data.previousSnapshot?.followers || [])
+  );
+  const prevFollowingSet = new Set(
+    extractUsernames(data.previousSnapshot?.following || [])
+  );
+
   const tabDefs = [
     { key: "dontFollowYouBack", label: "Don't follow you back" },
     { key: "youDontFollowBack", label: "You don't follow back" },
@@ -497,40 +627,106 @@ export async function renderAnalysisInto(container, data) {
     } else {
       const list = document.createElement("div");
       list.className = "instafn-list";
-      const userInfos = items.map((username) => {
-        let cachedData = getProfilePicData(username, data.cachedSnapshot);
-        if (!cachedData) {
-          const follower = data.followers?.find((u) => u.username === username);
-          const following = data.following?.find(
-            (u) => u.username === username
-          );
-          cachedData = follower || following;
-        }
+      const userInfos = await Promise.all(
+        items.map(async (username) => {
+          const currentIsFollowing = currentFollowingSet.has(username);
+          const currentIsFollowed = currentFollowerSet.has(username);
+          const prevIsFollowing = prevFollowingSet.has(username);
+          const prevIsFollowed = prevFollowerSet.has(username);
 
-        const info = cachedData
-          ? {
-              username: cachedData.username,
-              fullName: cachedData.fullName || username,
-              profilePic:
-                cachedData.profilePicBase64 || cachedData.profilePicUrl || null,
-              isPrivate: cachedData.isPrivate || false,
-              isVerified: cachedData.isVerified || false,
-              isFollowed: cachedData.isFollowed || false,
-              isFollowing: cachedData.isFollowing || false,
-              id: cachedData.id,
+          let cachedData =
+            getProfilePicData(username, data.cachedSnapshot) ||
+            getProfilePicData(username, data.previousSnapshot);
+
+          if (!cachedData) {
+            const follower = data.followers?.find(
+              (u) => u.username === username
+            );
+            const following = data.following?.find(
+              (u) => u.username === username
+            );
+            cachedData = follower || following;
+          }
+
+          let info =
+            cachedData &&
+            (cachedData.profilePicBase64 ||
+              cachedData.profilePicUrl ||
+              cachedData.profilePic ||
+              cachedData.isDeactivated !== undefined)
+              ? {
+                  username: cachedData.username,
+                  fullName: cachedData.fullName || username,
+                  profilePic:
+                    cachedData.profilePicBase64 ||
+                    cachedData.profilePic ||
+                    cachedData.profilePicUrl ||
+                    null,
+                  isPrivate: cachedData.isPrivate || false,
+                  isVerified: cachedData.isVerified || false,
+                  isFollowed: !!cachedData.isFollowed,
+                  isFollowing: !!cachedData.isFollowing,
+                  id: cachedData.id,
+                  isDeactivated: !!cachedData.isDeactivated,
+                }
+              : null;
+
+          const shouldProbe =
+            !info ||
+            (!info.profilePic && !info.isDeactivated) ||
+            def.key === "lostFollowers" ||
+            def.key === "peopleYouUnfollowed";
+
+          if (shouldProbe) {
+            try {
+              const fetched = await fetchUserInfo(username);
+              if (fetched) {
+                info = {
+                  username: fetched.username,
+                  fullName: fetched.fullName || username,
+                  profilePic: fetched.profilePic || info?.profilePic || null,
+                  isPrivate: fetched.isPrivate ?? info?.isPrivate ?? false,
+                  isVerified: fetched.isVerified ?? info?.isVerified ?? false,
+                  isFollowed:
+                    fetched.isFollowed ??
+                    info?.isFollowed ??
+                    currentIsFollowed,
+                  isFollowing:
+                    fetched.isFollowing ??
+                    info?.isFollowing ??
+                    currentIsFollowing,
+                  id: fetched.id || info?.id || null,
+                  isDeactivated: !!fetched.isDeactivated,
+                };
+              }
+            } catch (_) {
+              // ignore fetch errors; fall back to available info
             }
-          : {
+          }
+
+          if (!info) {
+            info = {
               username,
               fullName: username,
               profilePic: null,
               isPrivate: false,
               isVerified: false,
-              isFollowed: false,
-              isFollowing: false,
+              isFollowed: currentIsFollowed || prevIsFollowed,
+              isFollowing: currentIsFollowing || prevIsFollowing,
               id: null,
+              isDeactivated: false,
             };
-        return { username, info };
-      });
+          }
+
+          // Ensure relationship flags reflect current known sets
+          info.isFollowed =
+            info.isFollowed || currentIsFollowed || prevIsFollowed || false;
+          info.isFollowing =
+            info.isFollowing || currentIsFollowing || prevIsFollowing || false;
+
+          return { username, info };
+        })
+      );
 
       for (const { username, info } of userInfos) {
         const item = document.createElement("div");
@@ -556,6 +752,13 @@ export async function renderAnalysisInto(container, data) {
         usernameLink.rel = "noopener noreferrer";
         usernameLink.textContent = username;
         usernameEl.appendChild(usernameLink);
+        if (info.isDeactivated) {
+          const deactivatedTag = document.createElement("span");
+          deactivatedTag.className = "instafn-deactivated-tag";
+          deactivatedTag.title = "This account appears deactivated/unavailable.";
+          deactivatedTag.textContent = "⚠️";
+          usernameEl.appendChild(deactivatedTag);
+        }
         const nameEl = document.createElement("div");
         nameEl.className = "instafn-item-name";
         nameEl.textContent = info?.fullName || "";
@@ -564,16 +767,20 @@ export async function renderAnalysisInto(container, data) {
         itemLeft.appendChild(img);
         itemLeft.appendChild(itemInfo);
 
-        let itemIsFollowing = false;
-        switch (def.key) {
-          case "dontFollowYouBack":
-          case "mutuals":
-          case "peopleYouFollowed":
-            itemIsFollowing = true;
-            break;
-          default:
-            itemIsFollowing = info?.isFollowed || false;
-        }
+        const itemIsFollowing = (() => {
+          switch (def.key) {
+            case "dontFollowYouBack":
+            case "mutuals":
+            case "peopleYouFollowed":
+              return true;
+            case "youDontFollowBack":
+            case "peopleYouUnfollowed":
+            case "lostFollowers":
+              return false;
+            default:
+              return !!info?.isFollowing;
+          }
+        })();
         const followBtn = createFollowButton(username, itemIsFollowing, info);
         item.appendChild(itemLeft);
         item.appendChild(followBtn);

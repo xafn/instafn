@@ -22,13 +22,23 @@ const DEFAULTS = {
   disableTabProfile: false,
   disableTabMoreFromMeta: false,
   hideDMPopup: false,
+  enableMessageEditShortcut: true,
+  enableMessageDoubleTapLike: true,
+  showExactTime: true,
+  timeFormat: "default",
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   chrome.storage.sync.get(DEFAULTS, (cfg) => {
     for (const [k, v] of Object.entries(DEFAULTS)) {
       const el = document.getElementById(k);
-      if (el) el.checked = !!cfg[k];
+      if (el) {
+        if (el.type === "checkbox") {
+          el.checked = !!cfg[k];
+        } else if (el.tagName === "SELECT") {
+          el.value = cfg[k] || v;
+        }
+      }
     }
   });
 
@@ -36,7 +46,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const newCfg = {};
     for (const k of Object.keys(DEFAULTS)) {
       const el = document.getElementById(k);
-      if (el) newCfg[k] = !!el.checked;
+      if (el) {
+        if (el.type === "checkbox") {
+          newCfg[k] = !!el.checked;
+        } else if (el.tagName === "SELECT") {
+          newCfg[k] = el.value;
+        }
+      }
     }
 
     chrome.storage.sync.set(newCfg, () => {

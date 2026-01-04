@@ -113,6 +113,39 @@
           <input type="checkbox" id="hideDMPopup" />
           Hide DM Popup Menu (when clicking home from DMs)
         </label>
+        <label>
+          <input type="checkbox" id="enableMessageEditShortcut" />
+          Enable Quick Edit Shortcut (press ↑ in empty message box)
+        </label>
+        <label>
+          <input type="checkbox" id="enableMessageDoubleTapLike" />
+          Enable Double-Tap to Like Messages
+        </label>
+      </section>
+      <section>
+        <h2>Display</h2>
+        <label>
+          <input type="checkbox" id="showExactTime" />
+          Show Exact Time on Dates
+        </label>
+        <label style="display: flex; flex-direction: column; margin-top: 8px;">
+          <span style="margin-bottom: 4px;">Time Format:</span>
+          <select id="timeFormat" style="padding: 4px; margin-top: 4px;">
+            <option value="default">Jan 1, 2026, 6:14 AM (Default)</option>
+            <option value="full">January 1, 2026, 6:14:52 AM (Full)</option>
+            <option value="short">1/1/2026, 6:14 AM (Short)</option>
+            <option value="iso">2026-01-01 06:14:52 (ISO)</option>
+            <option value="us">01/01/2026, 6:14 AM (US)</option>
+            <option value="european">01/01/2026, 06:14 (European)</option>
+            <option value="date-only">Jan 1, 2026 (Date Only)</option>
+            <option value="time-only">6:14 AM (Time Only)</option>
+            <option value="24h">Jan 1, 2026, 06:14 (24-hour)</option>
+            <option value="24h-full">January 1, 2026, 06:14:52 (24-hour Full)</option>
+            <option value="relative-precise">2d (Jan 1, 2026, 6:14 AM) (Relative + Exact)</option>
+            <option value="compact">1 Jan 2026, 6:14 AM (Compact)</option>
+            <option value="rfc2822">Mon, 01 Jan 2026 06:14:52 +0000 (RFC 2822)</option>
+          </select>
+        </label>
       </section>
     </main>
     <footer>

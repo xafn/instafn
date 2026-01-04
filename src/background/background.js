@@ -11,6 +11,10 @@ chrome.runtime.onInstalled.addListener(async () => {
     activateFollowAnalyzer: true,
     enableVideoScrubber: false,
     hideRecentSearches: true,
+    enableMessageEditShortcut: true,
+    enableMessageDoubleTapLike: true,
+    showExactTime: true,
+    timeFormat: "default",
   };
 
   chrome.storage.sync.get(defaults, (current) => {

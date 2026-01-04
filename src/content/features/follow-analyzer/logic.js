@@ -20,6 +20,19 @@ export async function fetchUserInfo(username) {
           "Rate limited by Instagram (HTTP 429). Please try again in 2-3 hours."
         );
       }
+      if (response.status === 404) {
+        return {
+          username,
+          fullName: username,
+          profilePic: null,
+          isPrivate: false,
+          isVerified: false,
+          isFollowed: false,
+          isFollowing: false,
+          id: null,
+          isDeactivated: true,
+        };
+      }
       throw new Error(`HTTP ${response.status}`);
     }
     const info = await response.json();
@@ -185,8 +198,17 @@ export async function fetchFriendList(userId, type) {
       const fullName = u?.full_name || "";
       const isPrivate = u?.is_private || false;
       const isVerified = u?.is_verified || false;
-      const isFollowed = u?.followed_by_viewer || false;
-      const isFollowing = u?.follows_viewer || false;
+      // Instagram flags are viewer-relative:
+      // followed_by_viewer => viewer follows target
+      // follows_viewer     => target follows viewer
+      let isFollowing =
+        typeof u?.followed_by_viewer === "boolean"
+          ? u.followed_by_viewer
+          : type === "following";
+      let isFollowed =
+        typeof u?.follows_viewer === "boolean"
+          ? u.follows_viewer
+          : type === "followers";
 
       if (username) {
         let profilePicBase64 = null;
@@ -320,6 +342,18 @@ export async function computeFollowAnalysis() {
   const followerSet = toSet(followers);
   const followingSet = toSet(following);
 
+  // Normalize relationship flags for consistency
+  followers.forEach((u) => {
+    u.isFollowed = true; // they follow me
+    u.isFollowing = followingSet.has(u.username); // I follow them
+    u.isDeactivated = u.isDeactivated || false;
+  });
+  following.forEach((u) => {
+    u.isFollowing = true; // I follow them
+    u.isFollowed = followerSet.has(u.username); // they follow me
+    u.isDeactivated = u.isDeactivated || false;
+  });
+
   const dontFollowYouBack = setDiff(followingSet, followerSet);
   const youDontFollowBack = setDiff(followerSet, followingSet);
   const mutuals = setInter(followerSet, followingSet);
@@ -363,6 +397,7 @@ export async function computeFollowAnalysis() {
     lostFollowers,
     hasPrev: !!prev.current,
     cachedSnapshot: snapshot,
+    previousSnapshot: prev.current || null,
     followers,
     following,
   };

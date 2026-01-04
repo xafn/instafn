@@ -1,5 +1,6 @@
 .instafn-reel-container {
   position: relative !important;
+  isolation: isolate !important;
 }
 
 .instafn-reel-scrubber {
@@ -8,10 +9,11 @@
   left: 0 !important;
   right: 0 !important;
   padding: 4px 0 4px 0 !important;
-  z-index: 100000 !important;
+  z-index: 2147483647 !important;
   pointer-events: none !important;
   opacity: 0 !important;
   transition: opacity 0.3s ease !important;
+  isolation: isolate !important;
 }
 
 .instafn-reel-container:hover .instafn-reel-scrubber,
@@ -22,12 +24,13 @@
 .instafn-reel-scrubber-track {
   width: 100% !important;
   height: 6px !important;
-  background: rgba(255, 255, 255, 0.16) !important;
-  border-radius: 3px !important;
+  background: rgba(0, 0, 0, 0.5) !important;
   position: relative !important;
   cursor: pointer !important;
   pointer-events: auto !important;
   overflow: hidden !important;
+  box-shadow: 0 -8px 16px rgba(0, 0, 0, 0.5) !important;
+  z-index: 1 !important;
 }
 
 .instafn-reel-scrubber-progress {
@@ -36,7 +39,8 @@
   left: 0 !important;
   height: 100% !important;
   background: #ffffff !important;
-  border-radius: 3px !important;
+  border-top-right-radius: 3px !important;
+  border-bottom-right-radius: 3px !important;
   width: 0%;
   transition: width 0.1s linear;
   z-index: 2 !important;
@@ -61,7 +65,9 @@
 }
 
 .instafn-reel-scrubber-handle.scrubbing {
-  transition: opacity 0.2s, left 0s !important;
+  transition:
+    opacity 0.2s,
+    left 0s !important;
 }
 
 .instafn-reel-container:hover .instafn-reel-scrubber-handle,
@@ -84,12 +90,10 @@
   opacity: 0 !important;
   pointer-events: none !important;
   transition: opacity 0.15s ease !important;
-  z-index: 100001 !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif !important;
+  z-index: 2147483647 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
 }
 
 .instafn-reel-time-pill.visible {
   opacity: 1 !important;
 }
-
