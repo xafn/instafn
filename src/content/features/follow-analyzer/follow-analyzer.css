@@ -47,16 +47,21 @@
     justify-content: center !important;
     align-items: center !important;
     flex-wrap: wrap !important;
-    margin-top: 20px !important;
+    margin-top: 0 !important;
+    min-height: 44px !important;
+    contain: layout !important;
+    position: relative !important;
+    will-change: auto !important;
 }
 
+/* Only apply equal flex to html-div wrappers (profile page buttons), not modal buttons */
 .instafn-button-container > .html-div {
     flex: 1 !important;
     display: flex !important;
+    min-width: 0 !important;
 }
 
-.instafn-button-container .html-div > a,
-.instafn-button-container .html-div > button {
+.instafn-button-container .html-div > .instafn-scan-btn {
     width: 100% !important;
     display: flex !important;
     align-items: center !important;

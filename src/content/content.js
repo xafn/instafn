@@ -7,7 +7,6 @@ import {
   interceptFollows,
   interceptReposts,
   interceptTypingReceipts,
-  interceptJavaScriptExecution,
   forceHoverOnElement,
   keepElementClicked,
   releaseElementClick,
@@ -43,12 +42,33 @@ import { initManualStorySeenButton } from "./features/story-blocking/manualSeenB
 import { initExactTimeDisplay } from "./features/exact-time-display/index.js";
 import { initMessageEditShortcut } from "./features/message-edit-shortcut/index.js";
 import { initMessageDoubleTapLike } from "./features/message-double-tap-like/index.js";
+import { initMessageLogger } from "./features/message-logger/index.js";
+import { setupMessageViewer } from "./features/message-logger/message-viewer.js";
+import { initTypingReceiptBlocker } from "./features/typing-receipt-blocker/index.js";
+import {
+  initProfileFollowIndicator,
+  disableProfileFollowIndicator,
+  setupGraphQLMessageListenerEarly,
+} from "./features/profile-follow-indicator/index.js";
+import { initCallTimer } from "./features/call-timer/index.js";
 
 // Initialize user info cache
 window.userInfoCache = new Map();
 
 // Initialize global Instafn object immediately (before DOMContentLoaded)
 window.Instafn = window.Instafn || {};
+
+// Expose getCurrentUser for message logger
+window.Instafn.getCurrentUser = async () => {
+  const me = await getMeCached();
+  return me ? { username: me.username, userId: me.userId } : null;
+};
+
+// Expose getCurrentUser for message logger
+window.Instafn.getCurrentUser = async () => {
+  const me = await getMeCached();
+  return me ? { username: me.username, userId: me.userId } : null;
+};
 
 // Add enableDMDebug placeholder (will be replaced when module loads)
 window.Instafn.enableDMDebug = function() {
@@ -102,7 +122,8 @@ document.addEventListener("DOMContentLoaded", () => {
       activateFollowAnalyzer: true,
       enableVideoScrubber: false,
       enableProfilePicPopup: true,
-      enableHighlightPopup: true, // ADD THIS default
+      enableHighlightPopup: true,
+      enableProfileFollowIndicator: true,
       blockTypingReceipts: true,
       hideRecentSearches: true,
       disableTabSearch: false,
@@ -115,9 +136,12 @@ document.addEventListener("DOMContentLoaded", () => {
       disableTabMoreFromMeta: false,
       hideDMPopup: false,
       enableMessageEditShortcut: true,
+      enableMessageReplyShortcut: true,
       enableMessageDoubleTapLike: true,
+      enableMessageLogger: false,
       showExactTime: true,
       timeFormat: "default",
+      enableCallTimer: true,
     },
     (settings) => {
       if (settings.confirmLikes) interceptLikes();
@@ -127,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (settings.confirmReposts) interceptReposts();
       if (settings.confirmStoryQuickReactions) interceptStoryQuickReactions();
       if (settings.confirmStoryReplies) interceptStoryReplies();
-      if (settings.blockTypingReceipts) interceptTypingReceipts();
+      if (settings.blockTypingReceipts) initTypingReceiptBlocker(true);
       if (settings.blockStorySeen) initManualStorySeenButton(true);
 
       // Initialize video scrubber
@@ -156,14 +180,37 @@ document.addEventListener("DOMContentLoaded", () => {
         settings.timeFormat || "default"
       );
 
-      // Initialize message edit shortcut
-      if (settings.enableMessageEditShortcut) {
+      // Initialize message edit and reply shortcuts (checks settings internally)
+      if (
+        settings.enableMessageEditShortcut ||
+        settings.enableMessageReplyShortcut
+      ) {
         initMessageEditShortcut();
       }
 
       // Initialize message double-tap to like
       if (settings.enableMessageDoubleTapLike) {
         initMessageDoubleTapLike();
+      }
+
+      // Initialize message logger
+      if (settings.enableMessageLogger) {
+        initMessageLogger();
+        setupMessageViewer();
+      }
+
+      // Initialize profile follow indicator
+      if (settings.enableProfileFollowIndicator) {
+        initProfileFollowIndicator();
+      }
+
+      // Initialize call timer
+      if (settings.enableCallTimer) {
+        try {
+          initCallTimer(true);
+        } catch (err) {
+          console.error("Instafn: Error initializing call timer:", err);
+        }
       }
 
       // If this is a fresh install, enable follow analyzer by default
@@ -182,8 +229,55 @@ injectStoryBlocking();
 // Inject branding styles immediately
 injectBrandingStyles();
 
+// Inject WebSocket sniffer into page context (must be done early)
+function injectWebSocketSniffer() {
+  function injectScript(src) {
+    try {
+      const script = document.createElement("script");
+      script.src = chrome.runtime.getURL(src);
+      script.onload = function() {
+        this.remove();
+      };
+      (document.head || document.documentElement || document.body).appendChild(
+        script
+      );
+    } catch (err) {
+      console.error(`Instafn: Error injecting ${src}:`, err);
+    }
+  }
+
+  // Inject WebSocket sniffer
+  injectScript("content/features/message-logger/socket-sniffer.js");
+
+  // Inject GraphQL sniffer
+  injectScript("content/features/message-logger/graphql-sniffer.js");
+}
+
+// Inject WebSocket sniffer immediately (before DOMContentLoaded)
+// This needs to happen early to catch WebSocket connections, but logger initialization
+// is conditional based on settings (done in DOMContentLoaded)
+injectWebSocketSniffer();
+
+// Also try injecting after a short delay in case DOM isn't ready
+setTimeout(injectWebSocketSniffer, 0);
+
+// Initialize typing receipt blocker early (before DOMContentLoaded)
+// This needs to happen early to catch WebSocket connections
+// Always inject the script first, then set the flag from storage
+chrome.storage.sync.get({ blockTypingReceipts: true }, (settings) => {
+  initTypingReceiptBlocker(settings.blockTypingReceipts);
+});
+
+// Message logger initialization is done in DOMContentLoaded based on settings
+
 // Initialize follow analyzer early to prevent flash (before DOMContentLoaded)
 initFollowAnalyzerEarly();
+
+// Set up profile follow indicator message listener early (before DOMContentLoaded)
+// This ensures we catch GraphQL responses even on fast refreshes
+setupGraphQLMessageListenerEarly();
+
+// Message logger initialization is done in DOMContentLoaded based on settings
 
 // Initialize tab disabler early to prevent flash (before DOMContentLoaded)
 chrome.storage.sync.get(
@@ -201,259 +295,6 @@ chrome.storage.sync.get(
     initTabDisablerEarly(settings);
   }
 );
-
-// Inject JavaScript execution interceptor into page context
-function injectJSInterceptor() {
-  try {
-    const script = document.createElement("script");
-    script.textContent = `
-      (function() {
-        console.log("🚀 Starting JavaScript execution interceptor in page context...");
-        
-        const getStack = () => {
-          try {
-            return new Error().stack;
-          } catch (e) {
-            return "Stack trace unavailable";
-          }
-        };
-        
-        const logExecution = (type, data) => {
-          const stack = getStack();
-          console.log("🔍 [JS EXEC] " + type + ":", {
-            ...data,
-            source: stack,
-            timestamp: new Date().toISOString(),
-          });
-        };
-        
-        // Intercept eval()
-        try {
-          const originalEval = window.eval;
-          window.eval = function(code) {
-            logExecution("eval", {
-              code: typeof code === "string" ? code : String(code),
-              codeLength: typeof code === "string" ? code.length : 0,
-            });
-            return originalEval.apply(this, arguments);
-          };
-          console.log("✅ Intercepted eval()");
-        } catch (e) {
-          console.error("❌ Failed to intercept eval:", e);
-        }
-        
-        // Intercept Function constructor
-        try {
-          const originalFunction = window.Function;
-          window.Function = function(...args) {
-            const code = args[args.length - 1];
-            const params = args.slice(0, -1);
-            logExecution("Function", {
-              code: typeof code === "string" ? code : String(code),
-              params: params,
-              codeLength: typeof code === "string" ? code.length : 0,
-            });
-            return originalFunction.apply(this, args);
-          };
-          console.log("✅ Intercepted Function()");
-        } catch (e) {
-          console.error("❌ Failed to intercept Function:", e);
-        }
-        
-        // Intercept setTimeout with string code
-        try {
-          const originalSetTimeout = window.setTimeout;
-          window.setTimeout = function(fn, delay, ...args) {
-            if (typeof fn === "string") {
-              logExecution("setTimeout", {
-                code: fn,
-                delay: delay,
-                codeLength: fn.length,
-              });
-            }
-            return originalSetTimeout.apply(this, arguments);
-          };
-          console.log("✅ Intercepted setTimeout()");
-        } catch (e) {
-          console.error("❌ Failed to intercept setTimeout:", e);
-        }
-        
-        // Intercept setInterval with string code
-        try {
-          const originalSetInterval = window.setInterval;
-          window.setInterval = function(fn, delay, ...args) {
-            if (typeof fn === "string") {
-              logExecution("setInterval", {
-                code: fn,
-                delay: delay,
-                codeLength: fn.length,
-              });
-            }
-            return originalSetInterval.apply(this, arguments);
-          };
-          console.log("✅ Intercepted setInterval()");
-        } catch (e) {
-          console.error("❌ Failed to intercept setInterval:", e);
-        }
-        
-        // Intercept script tag creation
-        try {
-          const originalCreateElement = document.createElement;
-          document.createElement = function(tagName, options) {
-            const element = originalCreateElement.call(this, tagName, options);
-            if (tagName && tagName.toLowerCase() === "script") {
-              const originalSetAttribute = element.setAttribute;
-              element.setAttribute = function(name, value) {
-                if (name === "src" && value) {
-                  logExecution("script-src", {
-                    src: value,
-                  });
-                }
-                return originalSetAttribute.apply(this, arguments);
-              };
-              
-              const originalTextContentSetter = Object.getOwnPropertyDescriptor(
-                HTMLScriptElement.prototype,
-                "textContent"
-              );
-              if (originalTextContentSetter && originalTextContentSetter.set) {
-                Object.defineProperty(element, "textContent", {
-                  set: function(value) {
-                    if (value && typeof value === "string" && value.trim()) {
-                      logExecution("script-inline-textContent", {
-                        code: value,
-                        codeLength: value.length,
-                      });
-                    }
-                    originalTextContentSetter.set.call(this, value);
-                  },
-                  get: originalTextContentSetter.get,
-                  configurable: true,
-                });
-              }
-            }
-            return element;
-          };
-          console.log("✅ Intercepted createElement()");
-        } catch (e) {
-          console.error("❌ Failed to intercept createElement:", e);
-        }
-        
-        // MutationObserver for script additions
-        try {
-          const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-              mutation.addedNodes.forEach((node) => {
-                if (node.nodeType === 1 && node.tagName === "SCRIPT") {
-                  if (node.src) {
-                    logExecution("script-dom-added-src", {
-                      src: node.src,
-                      fullURL: node.src.startsWith("http") ? node.src : new URL(node.src, window.location.href).href,
-                    });
-                  } else if (node.textContent && node.textContent.trim()) {
-                    logExecution("script-dom-added-inline", {
-                      code: node.textContent,
-                      codeLength: node.textContent.length,
-                    });
-                  }
-                }
-              });
-            });
-          });
-          
-          if (document.documentElement) {
-            observer.observe(document.documentElement, {
-              childList: true,
-              subtree: true,
-            });
-            console.log("✅ MutationObserver watching for scripts");
-          } else {
-            const checkDOM = setInterval(() => {
-              if (document.documentElement) {
-                observer.observe(document.documentElement, {
-                  childList: true,
-                  subtree: true,
-                });
-                clearInterval(checkDOM);
-                console.log("✅ MutationObserver watching for scripts (delayed)");
-              }
-            }, 100);
-          }
-        } catch (e) {
-          console.error("❌ Failed to set up MutationObserver:", e);
-        }
-        
-        // Intercept innerHTML/outerHTML
-        try {
-          const interceptInnerHTML = (proto, property) => {
-            try {
-              const descriptor = Object.getOwnPropertyDescriptor(proto, property);
-              if (descriptor && descriptor.set) {
-                Object.defineProperty(proto, property, {
-                  set: function(value) {
-                    if (typeof value === "string") {
-                      const scriptMatch = value.match(/<script[^>]*>([\\s\\S]*?)<\\/script>/gi);
-                      if (scriptMatch) {
-                        scriptMatch.forEach((scriptTag) => {
-                          const srcMatch = scriptTag.match(/src\\s*=\\s*["']([^"']+)["']/i);
-                          if (srcMatch) {
-                            logExecution(property + "-script-src", {
-                              src: srcMatch[1],
-                              html: scriptTag.substring(0, 200),
-                            });
-                          } else {
-                            const codeMatch = scriptTag.match(/<script[^>]*>([\\s\\S]*?)<\\/script>/i);
-                            if (codeMatch && codeMatch[1].trim()) {
-                              logExecution(property + "-script-inline", {
-                                code: codeMatch[1],
-                                codeLength: codeMatch[1].length,
-                              });
-                            }
-                          }
-                        });
-                      }
-                    }
-                    descriptor.set.call(this, value);
-                  },
-                  get: descriptor.get,
-                  configurable: true,
-                });
-              }
-            } catch (e) {
-              // Silently fail
-            }
-          };
-          
-          [HTMLElement.prototype, Element.prototype].forEach((proto) => {
-            interceptInnerHTML(proto, "innerHTML");
-            interceptInnerHTML(proto, "outerHTML");
-          });
-          console.log("✅ Intercepted innerHTML/outerHTML");
-        } catch (e) {
-          console.error("❌ Failed to intercept innerHTML/outerHTML:", e);
-        }
-        
-        console.log("✅ JavaScript execution interceptor fully enabled in page context!");
-        console.log("📝 Watch the console for 🔍 [JS EXEC] messages");
-      })();
-    `;
-    (document.head || document.documentElement || document.body).appendChild(
-      script
-    );
-    script.remove(); // Remove script tag after execution
-    console.log(
-      "✅ Injected JavaScript execution interceptor into page context"
-    );
-  } catch (err) {
-    console.error("Instafn: Error injecting JS interceptor:", err);
-  }
-}
-
-// Inject JS interceptor immediately
-injectJSInterceptor();
-
-// Also enable in content script context (for content script execution)
-interceptJavaScriptExecution();
 
 // Listen for messages from the bridge script
 window.addEventListener("message", async (event) => {
@@ -541,6 +382,9 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync" && changes.blockStorySeen) {
     initManualStorySeenButton(changes.blockStorySeen.newValue);
   }
+  if (namespace === "sync" && changes.blockTypingReceipts) {
+    initTypingReceiptBlocker(changes.blockTypingReceipts.newValue);
+  }
   // Handle exact time display settings changes
   if (namespace === "sync" && (changes.showExactTime || changes.timeFormat)) {
     chrome.storage.sync.get(
@@ -588,6 +432,37 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
       chrome.storage.sync.get({ hideDMPopup: false }, (settings) => {
         initDMPopupHider(settings);
       });
+    }
+    // Handle message logger settings changes
+    if (changes.enableMessageLogger) {
+      if (changes.enableMessageLogger.newValue) {
+        initMessageLogger();
+        setupMessageViewer();
+      } else {
+        // Disable message logger - remove button and stop logging
+        const button = document.querySelector(
+          '[data-instafn-message-viewer-btn="true"]'
+        );
+        if (button) button.remove();
+        // Note: We don't stop the logger itself, just hide the UI
+        // The logger will continue to run but won't be visible
+      }
+    }
+    // Handle profile follow indicator settings changes
+    if (changes.enableProfileFollowIndicator) {
+      if (changes.enableProfileFollowIndicator.newValue) {
+        initProfileFollowIndicator();
+      } else {
+        disableProfileFollowIndicator();
+      }
+    }
+    // Handle call timer settings changes
+    if (changes.enableCallTimer) {
+      try {
+        initCallTimer(changes.enableCallTimer.newValue);
+      } catch (err) {
+        console.error("Instafn: Error updating call timer:", err);
+      }
     }
   }
 });

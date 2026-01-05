@@ -1,11 +1,18 @@
 /**
- * Message Edit Shortcut Feature
+ * Message Edit and Reply Shortcut Feature
  *
- * Allows pressing the up arrow key in the message textbox to edit the last sent message.
- * This will attempt to open edit mode, which only works if the message was sent within the last 15 minutes.
+ * Quick Edit: Ctrl/Cmd+Shift+Up - Edit the last message sent by the user
+ * Quick Reply: Ctrl/Cmd+Up - Reply to the other person's messages
+ *   - First press: Reply to most recent message
+ *   - Consecutive presses: Navigate up through messages (2nd most recent, 3rd, etc.)
  */
 
 import { showToast } from "../../ui/toast.js";
+
+// Quick reply navigation state
+let quickReplyIndex = 0;
+let quickReplyResetTimer = null;
+let currentConversationId = null;
 
 // Constants
 const ACTION_BUTTON_SELECTORS = [
@@ -251,50 +258,162 @@ export function initMessageEditShortcut() {
   document.addEventListener(
     "keydown",
     (e) => {
-      if (e.key !== "ArrowUp") return;
+      // Quick Edit: Ctrl/Cmd+Shift+Up
+      const isQuickEdit =
+        e.key === "ArrowUp" && (e.ctrlKey || e.metaKey) && e.shiftKey;
 
-      const messageBox = e.target.closest(
-        '[aria-label="Message"][contenteditable="true"], [aria-label="Message"][role="textbox"]'
+      // Quick Reply: Ctrl/Cmd+Up (with navigation support)
+      const isQuickReply =
+        e.key === "ArrowUp" && (e.ctrlKey || e.metaKey) && !e.shiftKey;
+
+      if (!isQuickEdit && !isQuickReply) return;
+
+      // Check settings for each feature
+      chrome.storage.sync.get(
+        {
+          enableMessageEditShortcut: true,
+          enableMessageReplyShortcut: true,
+        },
+        (settings) => {
+          if (isQuickEdit && !settings.enableMessageEditShortcut) return;
+          if (isQuickReply && !settings.enableMessageReplyShortcut) return;
+
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Inject CSS
+          if (!document.getElementById("instafn-hide-menu-style")) {
+            const style = document.createElement("style");
+            style.id = "instafn-hide-menu-style";
+            style.textContent = `[data-instafn-hiding] { opacity: 0 !important; visibility: hidden !important; transition: none !important; pointer-events: none !important; }`;
+            document.head.appendChild(style);
+          }
+
+          if (isQuickEdit) {
+            // Reset quick reply navigation when using quick edit
+            quickReplyIndex = 0;
+            currentConversationId = null;
+            if (quickReplyResetTimer) {
+              clearTimeout(quickReplyResetTimer);
+              quickReplyResetTimer = null;
+            }
+            handleQuickEdit();
+          } else if (isQuickReply) {
+            handleQuickReply();
+          }
+        }
       );
-      if (!messageBox || !isEmptyTextBox(messageBox)) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const lastUserMessage = findLastUserMessage();
-      if (!lastUserMessage) return;
-
-      const messageHoverElement = findMessageHoverElement(lastUserMessage);
-      if (!messageHoverElement) return;
-
-      // Inject CSS
-      if (!document.getElementById("instafn-hide-menu-style")) {
-        const style = document.createElement("style");
-        style.id = "instafn-hide-menu-style";
-        style.textContent = `[data-instafn-hiding] { opacity: 0 !important; visibility: hidden !important; transition: none !important; pointer-events: none !important; }`;
-        document.head.appendChild(style);
-      }
-
-      // Set up observer
-      const observer = createMenuObserver([]);
-      observer.observe(messageHoverElement, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["role", "aria-hidden"],
-      });
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["role", "aria-hidden"],
-      });
-
-      triggerHover(messageHoverElement);
-      waitForMoreOptionsAndClickEdit(messageHoverElement, observer);
     },
     true
   );
+}
+
+function handleQuickEdit() {
+  const lastUserMessage = findLastUserMessage();
+  if (!lastUserMessage) {
+    showToast("No message to edit", {
+      id: "instafn-edit-tooltip",
+    });
+    return;
+  }
+
+  const messageHoverElement = findMessageHoverElement(lastUserMessage);
+  if (!messageHoverElement) {
+    showToast("Quick edit failed", {
+      id: "instafn-edit-tooltip",
+    });
+    return;
+  }
+
+  // Set up observer
+  const observer = createMenuObserver([]);
+  observer.observe(messageHoverElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["role", "aria-hidden"],
+  });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["role", "aria-hidden"],
+  });
+
+  triggerHover(messageHoverElement);
+  waitForMoreOptionsAndClickEdit(messageHoverElement, observer);
+}
+
+function handleQuickReply() {
+  // Get current conversation ID (based on URL)
+  const conversationId = window.location.pathname;
+
+  // Reset index if conversation changed
+  if (currentConversationId !== conversationId) {
+    quickReplyIndex = 0;
+    currentConversationId = conversationId;
+  }
+
+  // Reset index after 1.5 seconds of inactivity
+  if (quickReplyResetTimer) {
+    clearTimeout(quickReplyResetTimer);
+  }
+  quickReplyResetTimer = setTimeout(() => {
+    quickReplyIndex = 0;
+  }, 1500);
+
+  // Get all messages from the other person
+  const otherPersonMessages = findAllOtherPersonMessages();
+
+  if (otherPersonMessages.length === 0) {
+    quickReplyIndex = 0;
+    showToast("No message to reply to", {
+      id: "instafn-reply-tooltip",
+    });
+    return;
+  }
+
+  // Check if we have a message at the current index
+  if (quickReplyIndex >= otherPersonMessages.length) {
+    quickReplyIndex = 0;
+    showToast("Quick reply failed", {
+      id: "instafn-reply-tooltip",
+    });
+    return;
+  }
+
+  // Get the message at the current index (0 = most recent, 1 = second most recent, etc.)
+  const targetMessage = otherPersonMessages[quickReplyIndex];
+
+  // Increment index for next time
+  quickReplyIndex++;
+
+  const messageHoverElement = findMessageHoverElement(targetMessage);
+  if (!messageHoverElement) {
+    quickReplyIndex = 0;
+    showToast("Quick reply failed", {
+      id: "instafn-reply-tooltip",
+    });
+    return;
+  }
+
+  // Set up observer
+  const observer = createMenuObserver([]);
+  observer.observe(messageHoverElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["role", "aria-hidden"],
+  });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["role", "aria-hidden"],
+  });
+
+  triggerHover(messageHoverElement);
+  waitForReplyButton(messageHoverElement, observer);
 }
 
 function findLastUserMessage() {
@@ -311,6 +430,7 @@ function findLastUserMessage() {
     return (
       text === "You sent" ||
       text?.startsWith("You sent") ||
+      text?.startsWith("You replied to") ||
       text === "Edited" ||
       ariaLabel === "Edited"
     );
@@ -326,6 +446,62 @@ function findLastUserMessage() {
       ?.closest('[role="row"]') ||
     lastMarker.closest('[role="row"]')
   );
+}
+
+function findLastOtherPersonMessage() {
+  const messages = findAllOtherPersonMessages();
+  return messages.length > 0 ? messages[0] : null;
+}
+
+function findAllOtherPersonMessages() {
+  const messageList = document.querySelector(
+    '[data-pagelet="IGDOpenMessageList"], [aria-label*="Messages in conversation"]'
+  );
+  if (!messageList) return [];
+
+  // Get all message rows
+  const allRows = Array.from(messageList.querySelectorAll('[role="row"]'));
+
+  if (allRows.length === 0) return [];
+
+  const otherPersonMessages = [];
+
+  // Iterate backwards through rows to find all non-user messages (most recent first)
+  for (let i = allRows.length - 1; i >= 0; i--) {
+    const row = allRows[i];
+
+    // Check if this row contains user message markers
+    const userMarkers = row.querySelectorAll("h6, span, div, button");
+    let isUserMessage = false;
+
+    for (const marker of userMarkers) {
+      const text = marker.textContent?.trim();
+      const ariaLabel = marker.getAttribute("aria-label") || "";
+      if (
+        text === "You sent" ||
+        text?.startsWith("You sent") ||
+        text?.startsWith("You replied to") ||
+        text === "Edited" ||
+        ariaLabel === "Edited"
+      ) {
+        isUserMessage = true;
+        break;
+      }
+    }
+
+    // If this is not a user message, add it to the list
+    if (!isUserMessage) {
+      // Make sure it's actually a message row (has a message button or content)
+      const hasMessageButton = row.querySelector(
+        '[role="button"][aria-label*="Double tap to like"]'
+      );
+      if (hasMessageButton) {
+        otherPersonMessages.push(row);
+      }
+    }
+  }
+
+  return otherPersonMessages;
 }
 
 function findMessageHoverElement(messageRow) {
@@ -412,10 +588,107 @@ function waitForMoreOptionsAndClickEdit(messageElement, observer) {
 
     if (attempts < maxAttempts) {
       setTimeout(checkForMoreOptions, 50);
+    } else {
+      if (observer) observer.disconnect();
+      showToast("Quick edit failed", {
+        id: "instafn-edit-tooltip",
+      });
+      setTimeout(() => restoreVisibility(hiddenElements), 300);
     }
   };
 
   checkForMoreOptions();
+}
+
+function waitForReplyButton(messageElement, observer) {
+  let attempts = 0;
+  const maxAttempts = 20;
+  const hiddenElements = [];
+
+  const checkForReplyButton = () => {
+    attempts++;
+    hideMenuElements(messageElement, hiddenElements);
+
+    // Find the reply button - it's the second hover button (after React)
+    // Look for buttons with "Reply to message" in aria-label
+    let replyButton =
+      messageElement
+        .querySelector('svg[aria-label*="Reply to message"]')
+        ?.closest("button, [role='button']") ||
+      messageElement.querySelector(
+        '[role="button"][aria-label*="Reply to message"]'
+      );
+
+    // If not found directly, search in parent elements
+    if (!replyButton) {
+      let searchElement = messageElement.parentElement;
+      let searchDepth = 0;
+      while (searchElement && searchDepth < 3) {
+        replyButton =
+          searchElement
+            .querySelector('svg[aria-label*="Reply to message"]')
+            ?.closest("button, [role='button']") ||
+          searchElement.querySelector(
+            '[role="button"][aria-label*="Reply to message"]'
+          );
+        if (replyButton) break;
+        searchElement = searchElement.parentElement;
+        searchDepth++;
+      }
+    }
+
+    // Alternative: find all action buttons and get the second one (React is first, Reply is second)
+    if (!replyButton) {
+      const allActionButtons = Array.from(
+        messageElement.querySelectorAll('[role="button"][aria-hidden="false"]')
+      ).filter((btn) => {
+        const svg = btn.querySelector("svg");
+        const svgLabel =
+          svg?.getAttribute("aria-label") || svg?.getAttribute("title") || "";
+        const ariaLabel = btn.getAttribute("aria-label") || "";
+        return (
+          svgLabel.includes("React") ||
+          svgLabel.includes("Reply") ||
+          ariaLabel.includes("React") ||
+          ariaLabel.includes("Reply")
+        );
+      });
+
+      // The reply button should be the second one (index 1)
+      if (allActionButtons.length >= 2) {
+        replyButton = allActionButtons[1];
+      } else if (allActionButtons.length === 1) {
+        // If only one button found, check if it's the reply button
+        const btn = allActionButtons[0];
+        const svg = btn.querySelector("svg");
+        const svgLabel =
+          svg?.getAttribute("aria-label") || svg?.getAttribute("title") || "";
+        const ariaLabel = btn.getAttribute("aria-label") || "";
+        if (svgLabel.includes("Reply") || ariaLabel.includes("Reply")) {
+          replyButton = btn;
+        }
+      }
+    }
+
+    if (replyButton) {
+      if (observer) observer.disconnect();
+      clickButtonInstantly(replyButton);
+      setTimeout(() => restoreVisibility(hiddenElements), 300);
+      return;
+    }
+
+    if (attempts < maxAttempts) {
+      setTimeout(checkForReplyButton, 50);
+    } else {
+      if (observer) observer.disconnect();
+      showToast("Quick reply failed", {
+        id: "instafn-reply-tooltip",
+      });
+      setTimeout(() => restoreVisibility(hiddenElements), 300);
+    }
+  };
+
+  checkForReplyButton();
 }
 
 function clickButtonInstantly(button, callback) {

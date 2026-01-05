@@ -6,7 +6,8 @@
     "description": "Instagram mod for the web. Confirm likes, comments, follows, calls. Block seen/read receipts.",
     "permissions": [
         "scripting",
-        "storage"
+        "storage",
+        "tabs"
     ],
     "host_permissions": [
         "*://www.instagram.com/*"
@@ -37,7 +38,12 @@
                 "content/features/follow-analyzer/follow-analyzer.css",
                 "content/features/video-scrubber/videoScrubber.css",
                 "content/features/profile-pic-popup/profilePicPopup.css",
-                "content/features/branding/branding.css"
+                "content/features/branding/branding.css",
+                "content/features/profile-follow-indicator/profile-follow-indicator.css",
+                "content/features/call-timer/call-timer.css",
+                "content/features/message-logger/socket-sniffer.js",
+                "content/features/message-logger/graphql-sniffer.js",
+                "content/features/typing-receipt-blocker/websocket-interceptor.js"
             ],
             "matches": [
                 "*://www.instagram.com/*"

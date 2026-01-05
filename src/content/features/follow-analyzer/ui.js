@@ -9,6 +9,7 @@ import {
   isOwnProfile,
 } from "./logic.js";
 import { injectStylesheet } from "../../utils/styleLoader.js";
+import { createModal, confirmModal } from "../../ui/modal.js";
 
 const ensureStyles = () =>
   injectStylesheet(
@@ -26,14 +27,14 @@ const isElementVisible = (el) => {
   return rect.width > 0 && rect.height > 0;
 };
 
-function findProfileEditLink() {
+function findArchiveButton() {
   const mainRoot =
     document.querySelector('main[role="main"]') ||
     document.querySelector("main") ||
     document.body;
 
   const candidates = Array.from(
-    mainRoot.querySelectorAll('a[href="/accounts/edit/"]')
+    mainRoot.querySelectorAll('a[href="/archive/stories/"]')
   );
 
   return candidates.find(
@@ -41,38 +42,6 @@ function findProfileEditLink() {
       !el.closest("nav") &&
       !el.closest('[role="navigation"]') &&
       isElementVisible(el)
-  );
-}
-
-function resolveActionContainer(editProfileLink) {
-  const candidates = [];
-
-  const htmlDivParent = editProfileLink.closest(".html-div");
-  if (htmlDivParent?.parentElement) {
-    candidates.push(htmlDivParent.parentElement);
-  }
-
-  const profileHeader =
-    editProfileLink.closest("header") ||
-    editProfileLink.closest("section") ||
-    editProfileLink.closest("main");
-
-  if (profileHeader) {
-    const archiveLink = profileHeader.querySelector('a[href="/archive/stories/"]');
-    const archiveContainer = archiveLink?.closest(".html-div")?.parentElement;
-    if (archiveContainer) candidates.push(archiveContainer);
-    const firstRow = profileHeader.querySelector(".html-div")?.parentElement;
-    if (firstRow) candidates.push(firstRow);
-    candidates.push(profileHeader);
-  }
-
-  candidates.push(editProfileLink.parentElement);
-
-  return candidates.find(
-    (candidate) =>
-      candidate &&
-      candidate.contains(editProfileLink) &&
-      !candidate.closest("nav,[role='navigation']")
   );
 }
 
@@ -154,36 +123,52 @@ function createScanButton() {
 function placeScanButton() {
   if (window.top !== window.self) return false;
 
-  const editProfileLink = findProfileEditLink();
+  // Only place button if we can find the archive button - this ensures we're on the user's own profile
+  const archiveLink = findArchiveButton();
   const existingBtn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
+
   if (existingBtn) {
-    if (editProfileLink) {
+    // If archive link exists, keep the button
+    if (archiveLink) {
       return true;
     }
+    // Otherwise remove it
     existingBtn.closest(".html-div")?.remove();
     return false;
   }
 
-  if (!editProfileLink) return false;
+  // Must have archive button to proceed
+  if (!archiveLink) return false;
 
-  const actionContainer = resolveActionContainer(editProfileLink);
-  if (!actionContainer) return false;
-  if (actionContainer.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) return true;
+  // Find the container that holds the archive button
+  const archiveWrapper = archiveLink.closest(".html-div");
+  if (!archiveWrapper) return false;
 
+  const archiveContainer = archiveWrapper.parentElement;
+  if (!archiveContainer) return false;
+
+  // Don't place if already exists in this container
+  if (archiveContainer.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) return true;
+
+  // Remove any existing buttons in wrong places
   const existingWrappers = Array.from(
-    actionContainer.querySelectorAll(".html-div")
+    document.querySelectorAll(".html-div")
   ).filter((wrapper) => wrapper.querySelector(".instafn-scan-btn"));
   existingWrappers.forEach((wrapper) => wrapper.remove());
 
-  actionContainer.classList.add("instafn-button-container");
+  // Always add the class to ensure consistent styling for all buttons
+  archiveContainer.classList.add("instafn-button-container");
 
+  // Create button wrapper with same structure as archive button
   const btnWrapper = document.createElement("div");
-  btnWrapper.className =
-    "html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl x9f619 xjbqb8w x78zum5 x15mokao x1ga7v0g x16uus16 xbiv7yw x1n2onr6 x1plvlek xryxfnj x1iyjqo2 x2lwn1j xeuugli xdt5ytf xqjyukv x1qjc9v5 x1oa3qoh x1nhvcw1";
+  btnWrapper.className = archiveWrapper.className; // Use same classes as archive button wrapper
 
   const btn = createScanButton();
   btnWrapper.appendChild(btn);
-  actionContainer.appendChild(btnWrapper);
+
+  // Insert right after the archive button's wrapper to keep buttons inline
+  archiveContainer.insertBefore(btnWrapper, archiveWrapper.nextSibling);
+
   return true;
 }
 
@@ -261,7 +246,9 @@ function injectEarlyHideCSS() {
 
   if (!injectStyle()) {
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", injectStyle, { once: true });
+      document.addEventListener("DOMContentLoaded", injectStyle, {
+        once: true,
+      });
       setTimeout(injectStyle, 0);
     } else {
       injectStyle();
@@ -309,23 +296,29 @@ export async function injectScanButton() {
       const btn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
       if (btn) btn.classList.add("instafn-visible");
       clearFloatingScanFab();
-      return;
+    } else {
+      // If we can't place it, remove any existing buttons
+      removeScanButton();
     }
 
-    // Fallback: inject a floating button if the in-feed placement fails
-    ensureFloatingScanFab();
-    const fab = document.querySelector(".instafn-scan-fab");
-    if (fab) fab.classList.add("instafn-visible");
-
+    // Set up observer to re-check placement when DOM changes
     if (!scanBtnObserver) {
       scanBtnObserver = new MutationObserver(async () => {
-        // Always check if it's still the user's own profile
+        // Always check if it's still the user's own profile first
         const me = await getMeCached();
         if (!me || !(await isOwnProfile())) {
           removeScanButton();
           return;
         }
 
+        // Check if archive button exists (required for placement)
+        const archiveLink = findArchiveButton();
+        if (!archiveLink) {
+          removeScanButton();
+          return;
+        }
+
+        // Only try to place if button doesn't exist
         const hasInline = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
         if (!hasInline) {
           const ok = placeScanButton();
@@ -333,10 +326,6 @@ export async function injectScanButton() {
             const btn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
             if (btn) btn.classList.add("instafn-visible");
             clearFloatingScanFab();
-          } else {
-            ensureFloatingScanFab();
-            const fab = document.querySelector(".instafn-scan-fab");
-            if (fab) fab.classList.add("instafn-visible");
           }
         }
       });
@@ -368,43 +357,11 @@ export function initFollowAnalyzerEarly() {
 
 export async function openModal(titleText) {
   ensureStyles();
-  const overlay = document.createElement("div");
-  overlay.className = "instafn-modal-overlay";
-
-  const modal = document.createElement("div");
-  modal.className = "instafn-modal";
-
-  const header = document.createElement("div");
-  header.className = "instafn-modal-header";
-
-  const headerLeft = document.createElement("div");
-  headerLeft.className = "instafn-header-left";
-
-  const title = document.createElement("div");
-  title.className = "instafn-modal-title";
-  title.textContent = titleText || "Follow analyzer";
-  headerLeft.appendChild(title);
-  const close = document.createElement("button");
-
-  close.className = "instafn-close";
-  close.innerHTML = `<svg aria-label="Close" class="x1lliihq x1n2onr6 x5n08af" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24">
-    <title>Close</title>
-    <line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="21" x2="3" y1="3" y2="21"></line>
-    <line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="21" x2="3" y1="21" y2="3"></line>
-  </svg>`;
-  close.addEventListener("click", () => overlay.remove());
-  header.appendChild(headerLeft);
-  header.appendChild(close);
-  const tabs = document.createElement("div");
-  tabs.className = "instafn-tabs";
-  const content = document.createElement("div");
-  content.className = "instafn-content";
+  const overlay = await createModal(titleText || "Follow analyzer", {
+    showTabs: true,
+  });
+  const content = overlay.querySelector(".instafn-content");
   content.innerHTML = '<div class="instafn-empty">Preparing analysis...</div>';
-  modal.appendChild(header);
-  modal.appendChild(tabs);
-  modal.appendChild(content);
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
   return overlay;
 }
 
@@ -415,54 +372,11 @@ export function confirmWithModal({
   cancelText = "Cancel",
 } = {}) {
   ensureStyles();
-  return new Promise(async (resolve) => {
-    try {
-      const overlay = await openModal(title);
-      const modal = overlay.querySelector(".instafn-modal");
-      modal.classList.add("instafn-modal--narrow");
-      const tabs = modal.querySelector(".instafn-tabs");
-      const content = modal.querySelector(".instafn-content");
-      tabs.style.display = "none";
-
-      content.innerHTML = `
-        <div style="text-align: center; padding: 20px 20px 28px 20px;">
-          <p class="instafn-modal-description">${message}</p>
-          <div class="instafn-button-container">
-            <button class="instafn-secondary-button" data-instafn-cancel>${cancelText}</button>
-            <button class="instafn-primary-button" data-instafn-confirm>${confirmText}</button>
-          </div>
-        </div>
-      `;
-
-      const cleanupAndResolve = (value) => {
-        overlay.remove();
-        resolve(value);
-      };
-
-      content
-        .querySelector("[data-instafn-cancel]")
-        .addEventListener("click", () => cleanupAndResolve(false));
-      content
-        .querySelector("[data-instafn-confirm]")
-        .addEventListener("click", () => cleanupAndResolve(true));
-
-      const closeBtn = modal.querySelector(".instafn-close");
-      if (closeBtn) closeBtn.onclick = () => cleanupAndResolve(false);
-
-      const onKey = (e) => {
-        if (e.key === "Escape") {
-          document.removeEventListener("keydown", onKey, true);
-          cleanupAndResolve(false);
-        }
-      };
-      document.addEventListener("keydown", onKey, true);
-
-      overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) cleanupAndResolve(false);
-      });
-    } catch (_) {
-      resolve(confirm(message));
-    }
+  return confirmModal({
+    title,
+    message,
+    confirmText,
+    cancelText,
   });
 }
 
@@ -688,9 +602,7 @@ export async function renderAnalysisInto(container, data) {
                   isPrivate: fetched.isPrivate ?? info?.isPrivate ?? false,
                   isVerified: fetched.isVerified ?? info?.isVerified ?? false,
                   isFollowed:
-                    fetched.isFollowed ??
-                    info?.isFollowed ??
-                    currentIsFollowed,
+                    fetched.isFollowed ?? info?.isFollowed ?? currentIsFollowed,
                   isFollowing:
                     fetched.isFollowing ??
                     info?.isFollowing ??
@@ -755,7 +667,8 @@ export async function renderAnalysisInto(container, data) {
         if (info.isDeactivated) {
           const deactivatedTag = document.createElement("span");
           deactivatedTag.className = "instafn-deactivated-tag";
-          deactivatedTag.title = "This account appears deactivated/unavailable.";
+          deactivatedTag.title =
+            "This account appears deactivated/unavailable.";
           deactivatedTag.textContent = "⚠️";
           usernameEl.appendChild(deactivatedTag);
         }

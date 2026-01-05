@@ -1,0 +1,13 @@
+.instafn-call-timer {
+  color: var(--primary-text);
+  font-size: inherit;
+  font-weight: inherit;
+  display: inline-block;
+}
+
+.instafn-call-timer-separator {
+  margin: 0 4px;
+  color: var(--primary-text);
+  opacity: 0.6;
+}
+

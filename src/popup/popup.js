@@ -1,6 +1,6 @@
 const DEFAULTS = {
   blockStorySeen: true,
-  blockDMSeen: true,
+  blockTypingReceipts: true,
   confirmLike: true,
   confirmComment: true,
   confirmCall: true,
@@ -12,6 +12,7 @@ const DEFAULTS = {
   enableVideoScrubber: false,
   enableProfilePicPopup: true,
   enableHighlightPopup: true,
+  enableProfileFollowIndicator: true,
   hideRecentSearches: true,
   disableTabSearch: false,
   disableTabExplore: false,
@@ -23,9 +24,12 @@ const DEFAULTS = {
   disableTabMoreFromMeta: false,
   hideDMPopup: false,
   enableMessageEditShortcut: true,
+  enableMessageReplyShortcut: true,
   enableMessageDoubleTapLike: true,
+  enableMessageLogger: false,
   showExactTime: true,
   timeFormat: "default",
+  enableCallTimer: true,
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -61,6 +65,21 @@ document.addEventListener("DOMContentLoaded", () => {
       saveBtn.textContent = "Saved!";
       saveBtn.style.background = "#4CAF50";
       saveBtn.style.color = "white";
+
+      // Refresh the current window's active tab if it's Instagram
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0] && tabs[0].url && tabs[0].url.includes("instagram.com")) {
+          chrome.tabs.reload(tabs[0].id);
+        } else {
+          // If active tab isn't Instagram, find and refresh any Instagram tab in current window
+          chrome.tabs.query({ currentWindow: true }, (allTabs) => {
+            const instagramTab = allTabs.find((tab) => tab.url && tab.url.includes("instagram.com"));
+            if (instagramTab) {
+              chrome.tabs.reload(instagramTab.id);
+            }
+          });
+        }
+      });
 
       setTimeout(() => {
         window.close();

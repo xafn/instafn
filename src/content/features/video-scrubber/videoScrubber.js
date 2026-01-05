@@ -42,6 +42,11 @@ function isReelContext(element) {
   return false;
 }
 
+function isCallContext() {
+  // Check if we're on a call page
+  return window.location.pathname.includes("/call/");
+}
+
 function isExploreGridVideo(element) {
   if (!element) return false;
 
@@ -377,6 +382,11 @@ function setupFeedVideoScrubber(video, rootContainer, scrubberContainer) {
 function processReelVideo(video) {
   if (!video || video.dataset.instafnReelScrubber === "true") return;
 
+  // Skip videos on call pages
+  if (isCallContext()) {
+    return;
+  }
+
   // Skip videos in explore grid - only add scrubbers when clicked and in popup
   if (isExploreGridVideo(video)) {
     return;
@@ -669,6 +679,11 @@ function ensureReelScrubberCSS() {
 function processFeedVideo(video) {
   if (!isEnabled) return; // Don't process if disabled
   if (!video) return;
+
+  // Skip videos on call pages
+  if (isCallContext()) {
+    return;
+  }
 
   // Skip videos in explore grid - only add scrubbers when clicked and in popup
   if (isExploreGridVideo(video)) {

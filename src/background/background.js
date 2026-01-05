@@ -1,7 +1,6 @@
 chrome.runtime.onInstalled.addListener(async () => {
   const defaults = {
     blockStorySeen: true,
-    blockDMSeen: true,
     confirmLike: true,
     confirmComment: true,
     confirmCall: true,
@@ -12,9 +11,12 @@ chrome.runtime.onInstalled.addListener(async () => {
     enableVideoScrubber: false,
     hideRecentSearches: true,
     enableMessageEditShortcut: true,
+    enableMessageReplyShortcut: true,
     enableMessageDoubleTapLike: true,
+    enableMessageLogger: false,
     showExactTime: true,
     timeFormat: "default",
+    enableCallTimer: true,
   };
 
   chrome.storage.sync.get(defaults, (current) => {

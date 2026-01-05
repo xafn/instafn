@@ -12,14 +12,16 @@
     </header>
     <main>
       <section>
-        <h2>Seen Receipts</h2>
+        <h2>Privacy & Receipts</h2>
         <label
           ><input type="checkbox" id="blockStorySeen" /> Block Story Seen</label
         >
-        <label><input type="checkbox" id="blockDMSeen" /> Block DM Seen</label>
+        <label
+          ><input type="checkbox" id="blockTypingReceipts" /> Block Typing Receipts</label
+        >
       </section>
       <section>
-        <h2>Confirmations</h2>
+        <h2>Action Confirmations</h2>
         <label><input type="checkbox" id="confirmLike" /> Confirm Likes</label>
         <label
           ><input type="checkbox" id="confirmComment" /> Confirm Comments</label
@@ -41,21 +43,11 @@
         >
       </section>
       <section>
-        <h2>Follow Analyzer</h2>
+        <h2>Profile Features</h2>
         <label
           ><input type="checkbox" id="activateFollowAnalyzer" /> Activate Follow
           Analyzer Button</label
         >
-      </section>
-      <section>
-        <h2>Video Controls</h2>
-        <label
-          ><input type="checkbox" id="enableVideoScrubber" /> Enable Video
-          Scrubber (experimental)</label
-        >
-      </section>
-      <section>
-        <h2>Profile Popup</h2>
         <label>
           <input type="checkbox" id="enableProfilePicPopup" />
           Enable Profile Picture Popup (long press)
@@ -64,16 +56,47 @@
           <input type="checkbox" id="enableHighlightPopup" />
           Enable Highlight Popup (long press)
         </label>
+        <label>
+          <input type="checkbox" id="enableProfileFollowIndicator" />
+          Show Follow Status Indicator
+        </label>
       </section>
       <section>
-        <h2>Search</h2>
+        <h2>Video & Media</h2>
+        <label
+          ><input type="checkbox" id="enableVideoScrubber" /> Enable Video
+          Scrubber (experimental)</label
+        >
+      </section>
+      <section>
+        <h2>Messages</h2>
+        <label>
+          <input type="checkbox" id="hideDMPopup" />
+          Hide DM Popup Menu (when clicking home from DMs)
+        </label>
+        <label>
+          <input type="checkbox" id="enableMessageEditShortcut" />
+          Enable Quick Edit (Ctrl/Cmd+Shift+↑ to edit your last message)
+        </label>
+        <label>
+          <input type="checkbox" id="enableMessageReplyShortcut" />
+          Enable Quick Reply (Ctrl/Cmd+↑ to reply, press multiple times to navigate up)
+        </label>
+        <label>
+          <input type="checkbox" id="enableMessageDoubleTapLike" />
+          Enable Double-Tap to Like Messages
+        </label>
+        <label>
+          <input type="checkbox" id="enableMessageLogger" />
+          Enable Message Logger (track deleted messages)
+        </label>
+      </section>
+      <section>
+        <h2>Navigation</h2>
         <label>
           <input type="checkbox" id="hideRecentSearches" />
           Hide Recent Searches
         </label>
-      </section>
-      <section>
-        <h2>Disable Navigation Tabs</h2>
         <label>
           <input type="checkbox" id="disableTabSearch" />
           Disable Search Tab
@@ -108,25 +131,14 @@
         </label>
       </section>
       <section>
-        <h2>Messages</h2>
-        <label>
-          <input type="checkbox" id="hideDMPopup" />
-          Hide DM Popup Menu (when clicking home from DMs)
-        </label>
-        <label>
-          <input type="checkbox" id="enableMessageEditShortcut" />
-          Enable Quick Edit Shortcut (press ↑ in empty message box)
-        </label>
-        <label>
-          <input type="checkbox" id="enableMessageDoubleTapLike" />
-          Enable Double-Tap to Like Messages
-        </label>
-      </section>
-      <section>
         <h2>Display</h2>
         <label>
           <input type="checkbox" id="showExactTime" />
           Show Exact Time on Dates
+        </label>
+        <label>
+          <input type="checkbox" id="enableCallTimer" />
+          Show Elapsed Time in Calls
         </label>
         <label style="display: flex; flex-direction: column; margin-top: 8px;">
           <span style="margin-bottom: 4px;">Time Format:</span>
