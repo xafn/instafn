@@ -2,12 +2,14 @@ import { getProfileUsernameFromPath } from "../follow-analyzer/logic.js";
 import { injectStylesheet } from "../../utils/styleLoader.js";
 
 const INDICATOR_ID = "instafn-follow-indicator";
+let isEnabled = false;
 let currentUsername = null;
 let followStatusCache = new Map();
 let retryCount = 0;
 let urlObserver = null;
 let domObserver = null;
 let messageListenerSetup = false;
+let messageListenerHandler = null;
 
 const MAX_RETRIES = 10;
 const POST_PAGE_REGEX = /^\/p\/[^\/]+\/?$/;
@@ -55,6 +57,7 @@ function isPostOrReelPage() {
 }
 
 function extractFollowStatus(data) {
+  if (!isEnabled) return;
   try {
     const username = data?.data?.user?.username;
     const followedBy = data?.data?.user?.friendship_status?.followed_by;
@@ -70,7 +73,13 @@ function extractFollowStatus(data) {
 }
 
 function setupGraphQLMessageListener() {
-  window.addEventListener("message", (event) => {
+  // Remove existing listener if any
+  if (messageListenerHandler) {
+    window.removeEventListener("message", messageListenerHandler);
+  }
+
+  messageListenerHandler = (event) => {
+    if (!isEnabled) return;
     if (
       event.source === window &&
       event.data?.source === "instafn-graphql" &&
@@ -84,14 +93,19 @@ function setupGraphQLMessageListener() {
           const match = event.data.data.match(/\{[\s\S]*"data"[\s\S]*\}/);
           if (match) extractFollowStatus(JSON.parse(match[0]));
         } catch {
-          setTimeout(() => injectFollowIndicator(), 2000);
+          if (isEnabled) {
+            setTimeout(() => injectFollowIndicator(), 2000);
+          }
         }
       }
     }
-  });
+  };
+
+  window.addEventListener("message", messageListenerHandler);
 }
 
 function injectFollowIndicator() {
+  if (!isEnabled) return;
   const username = getProfileUsernameFromPath();
   const existing = document.getElementById(INDICATOR_ID);
 
@@ -157,6 +171,7 @@ function injectFollowIndicator() {
 
   if (followsYou === undefined) {
     setTimeout(() => {
+      if (!isEnabled) return;
       const cachedStatus = followStatusCache.get(username);
       const existing = document.getElementById(INDICATOR_ID);
       if (existing) {
@@ -174,16 +189,30 @@ function injectFollowIndicator() {
 export function setupGraphQLMessageListenerEarly() {
   if (messageListenerSetup) return;
   messageListenerSetup = true;
-  setupGraphQLMessageListener();
+  // Only set up the listener if the feature is enabled
+  chrome.storage.sync.get(
+    { enableProfileFollowIndicator: true },
+    (settings) => {
+      if (settings.enableProfileFollowIndicator) {
+        isEnabled = true;
+        setupGraphQLMessageListener();
+      }
+    }
+  );
 }
 
 export function initProfileFollowIndicator() {
+  isEnabled = true;
+
   injectStylesheet(
     "content/features/profile-follow-indicator/profile-follow-indicator.css"
   );
 
-  if (!messageListenerSetup) {
+  // Set up message listener if not already set up or if it was removed
+  if (!messageListenerHandler) {
     setupGraphQLMessageListener();
+  }
+  if (!messageListenerSetup) {
     messageListenerSetup = true;
   }
 
@@ -195,6 +224,7 @@ export function initProfileFollowIndicator() {
   let lastProfileUsername = getProfileUsernameFromPath();
 
   urlObserver = new MutationObserver(() => {
+    if (!isEnabled) return;
     if (location.href !== lastUrl) {
       const newProfileUsername = getProfileUsernameFromPath();
       lastUrl = location.href;
@@ -218,6 +248,7 @@ export function initProfileFollowIndicator() {
   urlObserver.observe(document, { subtree: true, childList: true });
 
   domObserver = new MutationObserver(() => {
+    if (!isEnabled) return;
     const username = getProfileUsernameFromPath();
     if (
       username &&
@@ -235,6 +266,8 @@ export function initProfileFollowIndicator() {
 }
 
 export function disableProfileFollowIndicator() {
+  isEnabled = false;
+
   const existing = document.getElementById(INDICATOR_ID);
   if (existing) existing.remove();
 
@@ -245,6 +278,12 @@ export function disableProfileFollowIndicator() {
   if (domObserver) {
     domObserver.disconnect();
     domObserver = null;
+  }
+
+  // Remove message listener when disabled
+  if (messageListenerHandler) {
+    window.removeEventListener("message", messageListenerHandler);
+    messageListenerHandler = null;
   }
 
   currentUsername = null;

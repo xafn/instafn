@@ -41,6 +41,7 @@
                 "content/features/branding/branding.css",
                 "content/features/profile-follow-indicator/profile-follow-indicator.css",
                 "content/features/call-timer/call-timer.css",
+                "content/features/profile-comments/profile-comments.css",
                 "content/features/message-logger/socket-sniffer.js",
                 "content/features/message-logger/graphql-sniffer.js",
                 "content/features/typing-receipt-blocker/websocket-interceptor.js"

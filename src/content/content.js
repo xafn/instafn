@@ -51,6 +51,10 @@ import {
   setupGraphQLMessageListenerEarly,
 } from "./features/profile-follow-indicator/index.js";
 import { initCallTimer } from "./features/call-timer/index.js";
+import {
+  initProfileComments,
+  disableProfileComments,
+} from "./features/profile-comments/index.js";
 
 // Initialize user info cache
 window.userInfoCache = new Map();
@@ -142,6 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showExactTime: true,
       timeFormat: "default",
       enableCallTimer: true,
+      enableProfileComments: true,
     },
     (settings) => {
       if (settings.confirmLikes) interceptLikes();
@@ -210,6 +215,15 @@ document.addEventListener("DOMContentLoaded", () => {
           initCallTimer(true);
         } catch (err) {
           console.error("Instafn: Error initializing call timer:", err);
+        }
+      }
+
+      // Initialize profile comments
+      if (settings.enableProfileComments) {
+        try {
+          initProfileComments();
+        } catch (err) {
+          console.error("Instafn: Error initializing profile comments:", err);
         }
       }
 
@@ -462,6 +476,18 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         initCallTimer(changes.enableCallTimer.newValue);
       } catch (err) {
         console.error("Instafn: Error updating call timer:", err);
+      }
+    }
+    // Handle profile comments settings changes
+    if (changes.enableProfileComments) {
+      if (changes.enableProfileComments.newValue) {
+        try {
+          initProfileComments();
+        } catch (err) {
+          console.error("Instafn: Error initializing profile comments:", err);
+        }
+      } else {
+        disableProfileComments();
       }
     }
   }

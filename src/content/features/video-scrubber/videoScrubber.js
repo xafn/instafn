@@ -47,6 +47,56 @@ function isCallContext() {
   return window.location.pathname.includes("/call/");
 }
 
+function isDMChatVideo(element) {
+  if (!element) return false;
+
+  // Check if we're on a DM page
+  const pathname = window.location.pathname;
+  if (pathname.includes("/direct/") || pathname.includes("/direct")) {
+    return true;
+  }
+
+  // Check if video is within a DM chat container
+  // DM chats have specific aria-labels and structures
+  let container = element.parentElement;
+  let depth = 0;
+  while (container && depth < 15) {
+    // Check for DM-specific indicators
+    const ariaLabel = container.getAttribute("aria-label") || "";
+    if (
+      ariaLabel.includes("Conversation") ||
+      ariaLabel.includes("conversation") ||
+      ariaLabel.includes("Message") ||
+      ariaLabel.includes("message")
+    ) {
+      // Check if it's actually a DM chat (not just any conversation)
+      // DM chat containers often have specific class patterns or data attributes
+      const containerClasses = container.className || "";
+      if (
+        container.closest('div[role="dialog"]') ||
+        container.closest('div[aria-label*="Conversation"]') ||
+        container.closest('div[aria-label*="conversation"]')
+      ) {
+        // Additional check: look for DM-specific URL patterns in links
+        const hasDMLink = container.querySelector('a[href*="/direct/"]');
+        if (hasDMLink) {
+          return true;
+        }
+      }
+    }
+
+    // Check for direct message thread indicators
+    if (container.querySelector && container.querySelector('a[href*="/direct/t/"]')) {
+      return true;
+    }
+
+    container = container.parentElement;
+    depth++;
+  }
+
+  return false;
+}
+
 function isExploreGridVideo(element) {
   if (!element) return false;
 
@@ -387,6 +437,11 @@ function processReelVideo(video) {
     return;
   }
 
+  // Skip videos in DM chat
+  if (isDMChatVideo(video)) {
+    return;
+  }
+
   // Skip videos in explore grid - only add scrubbers when clicked and in popup
   if (isExploreGridVideo(video)) {
     return;
@@ -682,6 +737,11 @@ function processFeedVideo(video) {
 
   // Skip videos on call pages
   if (isCallContext()) {
+    return;
+  }
+
+  // Skip videos in DM chat
+  if (isDMChatVideo(video)) {
     return;
   }
 

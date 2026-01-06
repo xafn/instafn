@@ -1,0 +1,496 @@
+/* Profile Comments Sidebar Styles */
+
+.instafn-comments-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 999999;
+  display: flex;
+  justify-content: flex-end;
+  animation: instafn-comments-overlay-fade-in 0.2s ease;
+}
+
+@keyframes instafn-comments-overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.instafn-comments-sidebar {
+  width: 400px;
+  max-width: 90vw;
+  height: 100vh;
+  background: rgb(var(--ig-elevated-background));
+  display: flex;
+  flex-direction: column;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  animation: instafn-comments-sidebar-slide-in 0.3s ease;
+}
+
+@keyframes instafn-comments-sidebar-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.instafn-comments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid rgb(var(--ig-separator));
+  background: rgb(var(--ig-elevated-background));
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.instafn-comments-header-title {
+  font-weight: var(--font-weight-system-semibold);
+  font-size: var(--system-16-font-size);
+  color: rgb(var(--ig-primary-text));
+  font-family: var(--font-family-system);
+}
+
+.instafn-comments-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: rgb(var(--ig-primary-icon));
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.instafn-comments-close:hover {
+  background: rgb(var(--ig-highlight-background));
+}
+
+.instafn-comments-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  background: rgb(var(--ig-elevated-background));
+}
+
+.instafn-comments-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: rgb(var(--ig-secondary-text));
+  font-size: var(--system-14-font-size);
+  font-family: var(--font-family-system);
+}
+
+.instafn-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgb(var(--ig-separator));
+  border-top-color: rgb(var(--ig-primary-text));
+  border-radius: 50%;
+  animation: instafn-spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes instafn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.instafn-comments-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: rgb(var(--ig-secondary-text));
+  font-size: var(--system-16-font-size);
+  font-family: var(--font-family-system);
+}
+
+/* Comment Item Styles - ONLY scope to our comments sidebar, NOT Instagram's native comments */
+.instafn-comments-container ._a9ym,
+.instafn-comments-sidebar ._a9ym {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  display: block;
+}
+
+.instafn-comment-replies ._a9ym {
+  margin-top: 8px;
+  padding-left: 0;
+  width: 100%;
+  display: block;
+  list-style: none;
+}
+
+.instafn-comments-container ._a9zj._a9zl,
+.instafn-comments-sidebar ._a9zj._a9zl {
+  padding: 16px;
+  border-bottom: 1px solid rgb(var(--ig-separator));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.instafn-comments-container ._a9zj._a9zl:last-child,
+.instafn-comments-sidebar ._a9zj._a9zl:last-child {
+  border-bottom: none;
+}
+
+.instafn-comments-container ._a9zm,
+.instafn-comments-sidebar ._a9zm {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+.instafn-comments-container ._a9zn._a9zo,
+.instafn-comments-sidebar ._a9zn._a9zo {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+}
+
+.instafn-comments-container ._a9zn._a9zo img,
+.instafn-comments-sidebar ._a9zn._a9zo img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.instafn-comments-container ._a9zr,
+.instafn-comments-sidebar ._a9zr {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Comment header: username + comment text on same line, text wraps under username */
+.instafn-comment-header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+}
+
+.instafn-comment-username,
+a.instafn-comment-input-area {
+  color: rgb(var(--ig-primary-text)) !important;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 18px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.instafn-comment-username:hover {
+  text-decoration: underline;
+  color: rgb(var(--ig-primary-text));
+}
+
+.instafn-comment-text {
+  color: rgb(var(--ig-primary-text));
+  font-size: 14px;
+  line-height: 18px;
+  word-wrap: break-word;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  display: inline;
+}
+
+/* Comment footer: date, reply, delete buttons */
+.instafn-comment-footer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 4px 0 0 0;
+  padding: 0;
+}
+
+.instafn-comment-time {
+  color: rgb(var(--ig-secondary-text));
+  font-size: 12px;
+  line-height: 16px;
+  margin: 0;
+  padding: 0;
+}
+
+.instafn-comment-likes-count {
+  color: rgb(var(--ig-secondary-text));
+  font-size: 12px;
+  line-height: 16px;
+  margin: 0;
+  padding: 0;
+}
+
+.instafn-comments-container ._a9ze,
+.instafn-comments-sidebar ._a9ze {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: rgb(var(--ig-secondary-text));
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+.instafn-comments-container ._a9ze:hover,
+.instafn-comments-sidebar ._a9ze:hover {
+  color: rgb(var(--ig-primary-text));
+}
+
+.instafn-comments-container ._a9ze._a9zg,
+.instafn-comments-sidebar ._a9ze._a9zg {
+  text-decoration: none;
+}
+
+.instafn-comments-container ._a9zu,
+.instafn-comments-sidebar ._a9zu {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.instafn-comments-container ._a9zu .instafn-comment-like-heart,
+.instafn-comments-sidebar ._a9zu .instafn-comment-like-heart {
+  cursor: pointer;
+  padding: 8px;
+  margin: -8px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.instafn-comments-container ._a9zu .instafn-comment-like-heart:hover,
+.instafn-comments-sidebar ._a9zu .instafn-comment-like-heart:hover {
+  background-color: rgba(var(--ig-primary-text), 0.1);
+}
+
+.instafn-comment-like-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: rgb(var(--ig-secondary-text));
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+.instafn-comment-reply-btn,
+.instafn-comment-delete-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: rgb(var(--ig-secondary-text));
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  opacity: 1;
+}
+
+.instafn-comment-reply-btn:hover,
+.instafn-comment-delete-btn:hover {
+  opacity: 0.8;
+}
+
+.instafn-comment-delete-btn {
+  color: rgb(var(--ig-secondary-text));
+}
+
+/* Heart icon - solid red when liked */
+.instafn-comment-like-heart {
+  cursor: pointer;
+  padding: 8px;
+  margin: -8px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.instafn-comment-like-heart:hover {
+  background-color: rgba(var(--ig-primary-text), 0.1);
+}
+
+.instafn-comment-like-heart .instafn-heart-icon {
+  transition: fill 0.2s;
+  display: block;
+}
+
+.instafn-comment-like-heart[data-liked="true"] .instafn-heart-icon {
+  fill: rgb(237, 73, 86) !important;
+}
+
+.instafn-comment-like-heart[data-liked="true"] .instafn-heart-icon path {
+  fill: rgb(237, 73, 86) !important;
+}
+
+.instafn-comment-replies {
+  margin-top: 12px;
+  padding-left: 44px;
+  width: 100%;
+  display: block;
+  clear: both;
+  flex-shrink: 0;
+  order: 10;
+}
+
+.instafn-view-replies {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: var(--system-12-font-size);
+  color: rgb(var(--ig-secondary-text));
+  font-family: var(--font-family-system);
+  font-weight: var(--font-weight-system-semibold);
+  padding: 4px 0;
+  margin-bottom: 8px;
+  transition: color 0.2s;
+}
+
+.instafn-view-replies:hover {
+  color: rgb(var(--ig-primary-text));
+}
+
+.instafn-comment-reply-item {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+}
+
+.instafn-comment-reply-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* Comment Input Area */
+.instafn-comment-input-area {
+  padding: 0;
+  border-top: 1px solid rgb(var(--ig-separator));
+  background: rgb(var(--ig-elevated-background));
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.instafn-comment-input-area section {
+  padding: 16px;
+}
+
+.instafn-comment-input-area .x1y1aw1k {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 24px !important;
+  width: 100% !important;
+}
+
+.instafn-comment-input {
+  flex: 1;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  font-size: 14px !important;
+  color: rgb(var(--ig-primary-text)) !important;
+  font-family: var(--font-family-system) !important;
+  resize: none !important;
+  min-height: 24px !important;
+  max-height: 100px !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 18px !important;
+  overflow: hidden !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.instafn-comment-input::placeholder {
+  color: rgb(var(--ig-secondary-text)) !important;
+}
+
+.instafn-comment-post-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: var(--system-14-font-size);
+  color: rgb(var(--ig-colors-link));
+  font-family: var(--font-family-system);
+  font-weight: var(--font-weight-system-semibold);
+  padding: 4px 8px;
+  transition: opacity 0.2s;
+}
+
+.instafn-comment-post-btn:hover:not(:disabled) {
+  opacity: 0.7;
+}
+
+.instafn-comment-post-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Button styling to match Instagram */
+#instafn-profile-comments-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+#instafn-profile-comments-btn:hover {
+  background: rgb(var(--ig-highlight-background));
+}
+
+#instafn-profile-comments-btn:active {
+  opacity: 0.7;
+}
