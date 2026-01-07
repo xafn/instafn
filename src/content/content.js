@@ -6,7 +6,6 @@ import {
   interceptCalls,
   interceptFollows,
   interceptReposts,
-  interceptTypingReceipts,
   forceHoverOnElement,
   keepElementClicked,
   releaseElementClick,
@@ -24,7 +23,8 @@ import {
   initFollowAnalyzerEarly,
 } from "./features/follow-analyzer/index.js";
 import { isOwnProfile, getMeCached } from "./features/follow-analyzer/logic.js";
-
+import { injectScript } from "./utils/scriptInjector.js";
+import { watchUrlChanges } from "./utils/domObserver.js";
 import { initVideoScrubber } from "./features/video-scrubber/videoScrubber.js";
 import { injectProfilePicPopupOverlay } from "./features/profile-pic-popup/index.js";
 import { initHideRecentSearches } from "./features/search-cleaner/index.js";
@@ -68,47 +68,12 @@ window.Instafn.getCurrentUser = async () => {
   return me ? { username: me.username, userId: me.userId } : null;
 };
 
-// Expose getCurrentUser for message logger
-window.Instafn.getCurrentUser = async () => {
-  const me = await getMeCached();
-  return me ? { username: me.username, userId: me.userId } : null;
-};
-
 // Add enableDMDebug placeholder (will be replaced when module loads)
 window.Instafn.enableDMDebug = function() {
   console.log(
     "[Instafn] DM debug function not yet loaded. Please wait a moment and try again, or reload the page."
   );
 };
-
-// Inject the story blocking script into the page context
-function injectStoryBlocking() {
-  try {
-    const script = document.createElement("script");
-    script.src = chrome.runtime.getURL(
-      "content/features/story-blocking/storyblocking.js"
-    );
-    const target =
-      document.head || document.documentElement || document.body || null;
-    if (target) {
-      target.appendChild(script);
-    } else {
-      document.addEventListener(
-        "DOMContentLoaded",
-        () => {
-          const readyTarget =
-            document.head || document.documentElement || document.body;
-          if (readyTarget) {
-            readyTarget.appendChild(script);
-          }
-        },
-        { once: true }
-      );
-    }
-  } catch (err) {
-    console.error("Instafn: Error injecting story blocking script:", err);
-  }
-}
 
 // Wait until the DOM is ready for other features
 document.addEventListener("DOMContentLoaded", () => {
@@ -238,42 +203,16 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // Inject story blocking immediately
-injectStoryBlocking();
+injectScript("content/features/story-blocking/storyblocking.js");
 
 // Inject branding styles immediately
 injectBrandingStyles();
 
 // Inject WebSocket sniffer into page context (must be done early)
-function injectWebSocketSniffer() {
-  function injectScript(src) {
-    try {
-      const script = document.createElement("script");
-      script.src = chrome.runtime.getURL(src);
-      script.onload = function() {
-        this.remove();
-      };
-      (document.head || document.documentElement || document.body).appendChild(
-        script
-      );
-    } catch (err) {
-      console.error(`Instafn: Error injecting ${src}:`, err);
-    }
-  }
-
-  // Inject WebSocket sniffer
-  injectScript("content/features/message-logger/socket-sniffer.js");
-
-  // Inject GraphQL sniffer
-  injectScript("content/features/message-logger/graphql-sniffer.js");
-}
-
-// Inject WebSocket sniffer immediately (before DOMContentLoaded)
 // This needs to happen early to catch WebSocket connections, but logger initialization
 // is conditional based on settings (done in DOMContentLoaded)
-injectWebSocketSniffer();
-
-// Also try injecting after a short delay in case DOM isn't ready
-setTimeout(injectWebSocketSniffer, 0);
+injectScript("content/features/message-logger/socket-sniffer.js");
+injectScript("content/features/message-logger/graphql-sniffer.js");
 
 // Initialize typing receipt blocker early (before DOMContentLoaded)
 // This needs to happen early to catch WebSocket connections
@@ -348,39 +287,23 @@ async function checkAndInjectScanButton() {
     return;
   }
 
-  // Clear any pending timeout to avoid multiple calls
+  // Clear any pending timeouts to avoid multiple calls
   if (scanButtonTimeout) {
     clearTimeout(scanButtonTimeout);
   }
-  // Try immediately first
+
+  // Try immediately first (same pattern as comment button)
   injectScanButton();
-  // Then try again after a delay if the button wasn't placed (e.g., DOM not ready)
-  scanButtonTimeout = setTimeout(async () => {
-    // Double-check it's still the user's own profile
-    try {
-      const me = await getMeCached();
-      if (me && (await isOwnProfile())) {
-        if (!document.querySelector(".instafn-scan-btn")) {
-          injectScanButton();
-        }
-      } else {
-        removeScanButton();
-      }
-    } catch (err) {
-      removeScanButton();
-    }
-  }, 1000);
+  // Then try again with multiple delays to catch DOM changes (same pattern as comment button)
+  setTimeout(injectScanButton, 500);
+  setTimeout(injectScanButton, 1500);
+  setTimeout(injectScanButton, 3000);
 }
 
 // Check for profile pages on navigation
-let lastUrl = location.href;
-new MutationObserver(() => {
-  const url = location.href;
-  if (url !== lastUrl) {
-    lastUrl = url;
-    checkAndInjectScanButton();
-  }
-}).observe(document, { subtree: true, childList: true });
+watchUrlChanges(() => {
+  checkAndInjectScanButton();
+});
 
 // Initial check
 checkAndInjectScanButton();

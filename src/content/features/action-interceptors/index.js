@@ -1,4 +1,11 @@
 import { confirmWithModal } from "../follow-analyzer/index.js";
+import {
+  stopEvent,
+  dispatchFullClick,
+  dispatchMouseClick,
+  interceptClicks,
+  interceptKeydown,
+} from "../../utils/eventInterceptor.js";
 
 async function confirmAction(
   options,
@@ -7,862 +14,450 @@ async function confirmAction(
   if (typeof confirmWithModal === "function") {
     try {
       return await confirmWithModal(options);
-    } catch (_) {
-      // Fall through to native confirm on failure
-    }
+    } catch (_) {}
   }
   return confirm(fallbackMessage);
 }
 
-function stopEvent(e) {
-  e.stopImmediatePropagation();
-  e.stopPropagation();
-  e.preventDefault();
+/**
+ * Generic interceptor: find element → show modal → click if confirmed
+ */
+function intercept(config) {
+  const {
+    matcher,
+    getElement,
+    getConfirmation,
+    getTarget,
+    clickType = "mouse",
+    eventType = "click",
+  } = config;
+
+  const handler = async (e) => {
+    if (!matcher(e)) return;
+    const element = getElement(e);
+    if (!element) return;
+
+    const confirmation = getConfirmation(e, element);
+    if (!(await confirmAction(confirmation, confirmation.message))) return;
+
+    const target = getTarget ? getTarget(e, element) : element;
+    (clickType === "full" ? dispatchFullClick : dispatchMouseClick)(target);
+    return false;
+  };
+
+  (eventType === "keydown" ? interceptKeydown : interceptClicks)(
+    matcher,
+    handler
+  );
 }
 
-const FULL_CLICK_INIT = {
-  bubbles: true,
-  cancelable: true,
-  composed: true,
-  view: window,
+// Helper: find element by selector
+const find = (selector) => (e) => e.target.closest(selector);
+const findText = (selector, text) => (e) => {
+  const el = e.target.closest(selector);
+  return el && el.textContent.trim() === text;
 };
 
-function dispatchFullClick(target) {
-  const pointerDown = new PointerEvent("pointerdown", {
-    ...FULL_CLICK_INIT,
-    pointerType: "mouse",
-  });
-  const mouseDown = new MouseEvent("mousedown", FULL_CLICK_INIT);
-  const mouseUp = new MouseEvent("mouseup", FULL_CLICK_INIT);
-  const clickEvt = new MouseEvent("click", FULL_CLICK_INIT);
-
-  try {
-    target.dispatchEvent(pointerDown);
-  } catch (_) {}
-  try {
-    target.dispatchEvent(mouseDown);
-  } catch (_) {}
-  try {
-    target.dispatchEvent(mouseUp);
-  } catch (_) {}
-  target.dispatchEvent(clickEvt);
-}
-
-function dispatchMouseClick(target) {
-  const evt = new MouseEvent("click", {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-  });
-  target.dispatchEvent(evt);
-}
-
 export function interceptLikes() {
-  document.addEventListener(
-    "click",
-    async (e) => {
-      if (e.isTrusted === false) return;
-      // Ignore clicks that are part of a double-click
-      if (e.detail > 1) return;
-      const heartSvg = e.target.closest(
-        'svg[aria-label="Like"], svg[aria-label="Unlike"]'
+  intercept({
+    matcher: (e) => {
+      if (e.detail > 1) return false;
+      return !!(
+        find('svg[aria-label="Like"], svg[aria-label="Unlike"]')(e) ||
+        find('button, [role="button"], a, div[role="button"]')(
+          e
+        )?.querySelector?.('svg[aria-label="Like"], svg[aria-label="Unlike"]')
       );
-      const clickableWrapper = e.target.closest(
-        'button, [role="button"], a, div[role="button"]'
-      );
-      const heartInsideWrapper =
-        clickableWrapper?.querySelector?.(
-          'svg[aria-label="Like"], svg[aria-label="Unlike"]'
-        ) || null;
-      const isLikeArea = !!(heartSvg || heartInsideWrapper);
-
-      if (isLikeArea) {
-        stopEvent(e);
-        const likeIcon = heartSvg || heartInsideWrapper;
-        const isLiked = likeIcon.getAttribute("aria-label") === "Unlike";
-        const action = isLiked ? "unlike" : "like";
-        const confirmed = await confirmAction(
-          {
-            title: "Confirm like",
-            message: `Do you want to ${action} this post?`,
-            confirmText: isLiked ? "Unlike" : "Like",
-          },
-          `Do you want to ${action} this post?`
-        );
-
-        if (confirmed) {
-          const targetEl = clickableWrapper || likeIcon;
-          dispatchFullClick(targetEl);
-        }
-        return false;
-      }
     },
-    true
-  );
+    getElement: (e) =>
+      find('button, [role="button"], a, div[role="button"]')(e) ||
+      find('svg[aria-label="Like"], svg[aria-label="Unlike"]')(e),
+    getConfirmation: (e, el) => {
+      const icon =
+        el.querySelector?.(
+          'svg[aria-label="Like"], svg[aria-label="Unlike"]'
+        ) ||
+        el.closest?.('svg[aria-label="Like"], svg[aria-label="Unlike"]') ||
+        el;
+      const isLiked = icon.getAttribute("aria-label") === "Unlike";
+      return {
+        title: "Confirm like",
+        message: `Do you want to ${isLiked ? "unlike" : "like"} this post?`,
+        confirmText: isLiked ? "Unlike" : "Like",
+      };
+    },
+    clickType: "full",
+  });
 
-  // Detect double clicks anywhere inside a post
+  // Double-click handler
   document.addEventListener(
     "dblclick",
     async (e) => {
       if (e.isTrusted === false) return;
-      e.stopImmediatePropagation();
-      e.stopPropagation();
-      e.preventDefault();
-
+      stopEvent(e);
       const article = e.target.closest("article");
       if (!article) return;
-
-      const isStory =
+      if (
         window.location.pathname.includes("/stories/") ||
-        article.querySelector('[data-testid="story"], [aria-label*="story"]');
-      const isReel =
+        article.querySelector('[data-testid="story"], [aria-label*="story"]')
+      )
+        return;
+      if (
         window.location.pathname.includes("/reels/") ||
-        article.querySelector('[data-testid="reel"], [aria-label*="reel"]');
-      if (isStory || isReel) return;
+        article.querySelector('[data-testid="reel"], [aria-label*="reel"]')
+      )
+        return;
 
-      // Find the like button inside the article
       const likeBtn = article
         .querySelector('svg[aria-label="Like"]')
         ?.closest('button, [role="button"], a, div[role="button"]');
-
-      const confirmed = await confirmAction(
-        {
+      if (
+        likeBtn &&
+        (await confirmAction({
           title: "Confirm like",
           message: "Do you want to like this post?",
           confirmText: "Like",
-        },
-        "Do you want to like this post?"
-      );
-
-      if (confirmed) {
+        }))
+      ) {
         dispatchFullClick(likeBtn);
       }
-      return false;
     },
     true
   );
 }
 
 export function interceptComments() {
-  document.addEventListener(
-    "click",
-    async (e) => {
-      if (e.isTrusted === false) return;
-      const commentButton = e.target.closest(
-        'div[role="button"][tabindex="0"]'
+  intercept({
+    matcher: findText('div[role="button"][tabindex="0"]', "Post"),
+    getElement: find('div[role="button"][tabindex="0"]'),
+    getConfirmation: () => ({
+      title: "Confirm comment",
+      message: "Do you want to post this comment?",
+      confirmText: "Post",
+    }),
+  });
+
+  interceptKeydown(
+    (e) => {
+      if (e.key !== "Enter" || e.shiftKey) return false;
+      const field = e.target.closest(
+        'textarea, input, [contenteditable="true"], [role="textbox"]'
       );
-      if (commentButton && commentButton.textContent.trim() === "Post") {
-        stopEvent(e);
-        const confirmed = await confirmAction(
-          {
-            title: "Confirm comment",
-            message: "Do you want to post this comment?",
-            confirmText: "Post",
-          },
-          "Do you want to post this comment?"
-        );
-
-        if (confirmed) {
-          dispatchMouseClick(commentButton);
-        }
-      }
+      if (!field) return false;
+      const meta = [
+        field.getAttribute("aria-label") || "",
+        field.getAttribute("placeholder") || "",
+        field.getAttribute("name") || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      const isComment =
+        meta.includes("comment") ||
+        !!field.closest('[data-testid="post_comment_input"]');
+      const container = field.closest("form, div, section") || document;
+      const hasPostBtn =
+        container
+          .querySelector('div[role="button"][tabindex="0"]')
+          ?.textContent.trim() === "Post";
+      return isComment || hasPostBtn;
     },
-    true
-  );
-
-  // Check if enter was pressed to comment
-  document.addEventListener(
-    "keydown",
     async (e) => {
-      if (e.isTrusted === false) return;
-      if (e.key === "Enter" && !e.shiftKey) {
-        const commentField = e.target.closest(
-          'textarea, input, [contenteditable="true"], [role="textbox"]'
+      const field = e.target.closest(
+        'textarea, input, [contenteditable="true"], [role="textbox"]'
+      );
+      if (
+        await confirmAction({
+          title: "Confirm comment",
+          message: "Do you want to post this comment?",
+          confirmText: "Post",
+        })
+      ) {
+        const container = field.closest("form, div, section") || document;
+        const postBtn = container.querySelector(
+          'div[role="button"][tabindex="0"]'
         );
-
-        if (commentField) {
-          // Only treat fields that look like comment boxes (avoid DM/search inputs)
-          const fieldMeta =
-            [
-              commentField.getAttribute("aria-label") || "",
-              commentField.getAttribute("placeholder") || "",
-              commentField.getAttribute("name") || "",
-            ]
-              .join(" ")
-              .toLowerCase() || "";
-
-          const isLikelyComment =
-            fieldMeta.includes("comment") ||
-            !!commentField.closest('[data-testid="post_comment_input"]');
-
-          // Reels overlay sometimes lacks explicit comment labels; fall back to presence of a Post button nearby
-          const container =
-            commentField.closest("form, div, section") || document;
-          const nearbyPostBtn = container.querySelector(
-            'div[role="button"][tabindex="0"]'
+        if (postBtn?.textContent.trim() === "Post") {
+          dispatchMouseClick(postBtn);
+        } else {
+          field.dispatchEvent(
+            new KeyboardEvent("keydown", {
+              key: "Enter",
+              bubbles: true,
+              cancelable: true,
+            })
           );
-          const hasPostButton =
-            nearbyPostBtn && nearbyPostBtn.textContent.trim() === "Post";
-
-          if (!isLikelyComment && !hasPostButton) return;
-
-          stopEvent(e);
-          const confirmed = await confirmAction(
-            {
-              title: "Confirm comment",
-              message: "Do you want to post this comment?",
-              confirmText: "Post",
-            },
-            "Do you want to post this comment?"
-          );
-
-          if (confirmed) {
-            const postBtn = container.querySelector(
-              'div[role="button"][tabindex="0"]'
-            );
-            if (postBtn && postBtn.textContent.trim() === "Post") {
-              dispatchMouseClick(postBtn);
-            } else {
-              const keyEvt = new KeyboardEvent("keydown", {
-                key: "Enter",
-                bubbles: true,
-                cancelable: true,
-              });
-              commentField.dispatchEvent(keyEvt);
-            }
-          } else {
-            return false;
-          }
         }
       }
-    },
-    true
+      return false;
+    }
   );
 }
 
 export function interceptCalls() {
-  document.addEventListener(
-    "click",
-    async (e) => {
-      if (e.isTrusted === false) return;
-      const videoCallButton = e.target.closest('svg[aria-label="Video call"]');
-      const audioCallButton = e.target.closest('svg[aria-label="Audio call"]');
-
-      if (videoCallButton || audioCallButton) {
-        stopEvent(e);
-        const confirmed = await confirmAction(
-          {
-            title: "Confirm call",
-            message: "Do you want to start this call?",
-            confirmText: "Start call",
-          },
-          "Do you want to start this call?"
-        );
-
-        if (confirmed) {
-          const clickable =
-            (videoCallButton || audioCallButton).closest(
-              'button, [role="button"], a, div[role="button"]'
-            ) ||
-            videoCallButton ||
-            audioCallButton;
-          dispatchMouseClick(clickable);
-        }
-      }
+  intercept({
+    matcher: (e) =>
+      !!(
+        find('svg[aria-label="Video call"]')(e) ||
+        find('svg[aria-label="Audio call"]')(e)
+      ),
+    getElement: (e) => {
+      const btn =
+        find('svg[aria-label="Video call"]')(e) ||
+        find('svg[aria-label="Audio call"]')(e);
+      return (
+        btn?.closest('button, [role="button"], a, div[role="button"]') || btn
+      );
     },
-    true
-  );
+    getConfirmation: () => ({
+      title: "Confirm call",
+      message: "Do you want to start this call?",
+      confirmText: "Start call",
+    }),
+  });
 }
 
 export function interceptFollows() {
-  document.addEventListener(
-    "click",
-    async (e) => {
-      if (e.isTrusted === false) return;
-      const followButton = e.target.closest('button, div[role="button"]');
-      if (followButton) {
-        let followText = null;
-        if (followButton.tagName === "BUTTON") {
-          followText = followButton.querySelector(
-            'div[dir="auto"], span[dir="auto"]'
-          );
-        } else if (
-          followButton.tagName === "DIV" &&
-          followButton.getAttribute("role") === "button"
-        ) {
-          followText = followButton;
-        }
-
-        const textContent = followText?.textContent?.trim();
-        const isFollow =
-          textContent === "Follow" || textContent === "Follow Back";
-        const isUnfollow = textContent === "Unfollow";
-
-        if (followText && (isFollow || isUnfollow)) {
-          stopEvent(e);
-          const action = isUnfollow ? "unfollow" : "follow";
-          const confirmed = await confirmAction(
-            {
-              title: `Confirm ${action}`,
-              message: `Do you want to ${action} this user?`,
-              confirmText: isUnfollow ? "Unfollow" : "Follow",
-            },
-            `Do you want to ${action} this user?`
-          );
-
-          if (confirmed) {
-            dispatchMouseClick(followButton);
-          } else {
-            return false;
-          }
-        }
-      }
+  intercept({
+    matcher: (e) => {
+      const btn = find('button, div[role="button"]')(e);
+      if (!btn) return false;
+      const text = (btn.tagName === "BUTTON"
+        ? btn.querySelector('div[dir="auto"], span[dir="auto"]')
+        : btn.getAttribute("role") === "button"
+        ? btn
+        : null
+      )?.textContent?.trim();
+      return text === "Follow" || text === "Follow Back" || text === "Unfollow";
     },
-    true
-  );
+    getElement: find('button, div[role="button"]'),
+    getConfirmation: (e, el) => {
+      const text = (el.tagName === "BUTTON"
+        ? el.querySelector('div[dir="auto"], span[dir="auto"]')
+        : el.getAttribute("role") === "button"
+        ? el
+        : null
+      )?.textContent?.trim();
+      const isUnfollow = text === "Unfollow";
+      return {
+        title: `Confirm ${isUnfollow ? "unfollow" : "follow"}`,
+        message: `Do you want to ${
+          isUnfollow ? "unfollow" : "follow"
+        } this user?`,
+        confirmText: isUnfollow ? "Unfollow" : "Follow",
+      };
+    },
+  });
 }
 
 export function interceptStoryQuickReactions() {
-  document.addEventListener(
-    "click",
-    async (e) => {
-      if (e.isTrusted === false) return;
-      const emojiButton = e.target.closest('div[role="button"] span.xcg35fi');
-
-      if (emojiButton) {
-        stopEvent(e);
-        const emoji = emojiButton.textContent;
-        const confirmed = await confirmAction(
-          {
-            title: "Confirm reaction",
-            message: `Do you want to react with ${emoji} to this story?`,
-            confirmText: "Send",
-          },
-          `Do you want to react with ${emoji} to this story?`
-        );
-
-        if (confirmed) {
-          const clickable =
-            emojiButton.closest('div[role="button"]') || emojiButton;
-          dispatchMouseClick(clickable);
-        } else {
-          return false;
-        }
-      }
+  intercept({
+    matcher: (e) => !!find('div[role="button"] span.xcg35fi')(e),
+    getElement: (e) => {
+      const emoji = find('div[role="button"] span.xcg35fi')(e);
+      return emoji?.closest('div[role="button"]') || emoji;
     },
-    true
-  );
+    getConfirmation: (e) => ({
+      title: "Confirm reaction",
+      message: `Do you want to react with ${
+        find('div[role="button"] span.xcg35fi')(e)?.textContent
+      } to this story?`,
+      confirmText: "Send",
+    }),
+  });
 }
 
 export function interceptStoryReplies() {
-  document.addEventListener(
-    "click",
+  intercept({
+    matcher: findText('div[role="button"][tabindex="0"]', "Send"),
+    getElement: find('div[role="button"][tabindex="0"]'),
+    getConfirmation: () => ({
+      title: "Confirm reply",
+      message: "Do you want to send this story reply?",
+      confirmText: "Send",
+    }),
+  });
+
+  interceptKeydown(
+    (e) =>
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      !!find('textarea[placeholder*="Reply to"]')(e),
     async (e) => {
-      if (e.isTrusted === false) return;
-      const sendButton = e.target.closest('div[role="button"][tabindex="0"]');
-      if (sendButton && sendButton.textContent.trim() === "Send") {
-        stopEvent(e);
-        const confirmed = await confirmAction(
-          {
-            title: "Confirm reply",
-            message: "Do you want to send this story reply?",
-            confirmText: "Send",
-          },
-          "Do you want to send this story reply?"
+      const textarea = find('textarea[placeholder*="Reply to"]')(e);
+      if (
+        await confirmAction({
+          title: "Confirm reply",
+          message: "Do you want to send this story reply?",
+          confirmText: "Send",
+        })
+      ) {
+        const container = textarea.closest("form, div, section") || document;
+        const sendBtn = container.querySelector(
+          'div[role="button"][tabindex="0"]'
         );
-
-        if (confirmed) {
-          dispatchMouseClick(sendButton);
+        if (sendBtn?.textContent.trim() === "Send") {
+          dispatchMouseClick(sendBtn);
         } else {
-          return false;
-        }
-      }
-    },
-    true
-  );
-
-  // Check if enter was pressed to reply to a story
-  document.addEventListener(
-    "keydown",
-    async (e) => {
-      if (e.isTrusted === false) return;
-      if (e.key === "Enter" && !e.shiftKey) {
-        const textarea = e.target.closest('textarea[placeholder*="Reply to"]');
-        if (textarea) {
-          stopEvent(e);
-          const confirmed = await confirmAction(
-            {
-              title: "Confirm reply",
-              message: "Do you want to send this story reply?",
-              confirmText: "Send",
-            },
-            "Do you want to send this story reply?"
+          textarea.dispatchEvent(
+            new KeyboardEvent("keydown", {
+              key: "Enter",
+              bubbles: true,
+              cancelable: true,
+            })
           );
-
-          if (confirmed) {
-            const container =
-              textarea.closest("form, div, section") || document;
-            const sendBtn = container.querySelector(
-              'div[role="button"][tabindex="0"]'
-            );
-            if (sendBtn && sendBtn.textContent.trim() === "Send") {
-              dispatchMouseClick(sendBtn);
-            } else {
-              const keyEvt = new KeyboardEvent("keydown", {
-                key: "Enter",
-                bubbles: true,
-                cancelable: true,
-              });
-              textarea.dispatchEvent(keyEvt);
-            }
-          } else {
-            return false;
-          }
         }
       }
-    },
-    true
+      return false;
+    }
   );
 }
 
 export function interceptReposts() {
-  document.addEventListener(
-    "click",
-    async (e) => {
-      if (e.isTrusted === false) return;
-      // Ignore clicks that are part of a double-click
-      if (e.detail > 1) return;
-
-      // Check for repost SVG - both "Repost" and "Unrepost" states
-      const repostSvg = e.target.closest(
-        'svg[aria-label="Repost"], svg[aria-label="Unrepost"]'
-      );
-      const clickableWrapper = e.target.closest(
-        'button, [role="button"], a, div[role="button"]'
-      );
-      const repostInsideWrapper =
-        clickableWrapper?.querySelector?.(
+  intercept({
+    matcher: (e) => {
+      if (e.detail > 1) return false;
+      return !!(
+        find('svg[aria-label="Repost"], svg[aria-label="Unrepost"]')(e) ||
+        find('button, [role="button"], a, div[role="button"]')(
+          e
+        )?.querySelector?.(
           'svg[aria-label="Repost"], svg[aria-label="Unrepost"]'
-        ) || null;
-      const isRepostArea = !!(repostSvg || repostInsideWrapper);
-
-      if (isRepostArea) {
-        stopEvent(e);
-
-        // Determine if already reposted
-        const repostIcon = repostSvg || repostInsideWrapper;
-        const ariaLabel = repostIcon?.getAttribute("aria-label") || "";
-        const isReposted =
-          ariaLabel === "Unrepost" ||
-          // Check if SVG path contains checkmark (reposted state has checkmark path)
-          (repostIcon &&
-            repostIcon.querySelector("path") &&
-            repostIcon
-              .querySelector("path")
-              ?.getAttribute("d")
-              ?.includes("4.612-4.614"));
-
-        const action = isReposted ? "unrepost" : "repost";
-        const actionText = isReposted ? "Unrepost" : "Repost";
-
-        const confirmed = await confirmAction(
-          {
-            title: `Confirm ${action}`,
-            message: `Do you want to ${action} this?`,
-            confirmText: actionText,
-          },
-          `Do you want to ${action} this?`
-        );
-
-        if (confirmed) {
-          const targetEl = clickableWrapper || repostIcon;
-          dispatchFullClick(targetEl);
-        }
-        return false;
-      }
+        )
+      );
     },
-    true
-  );
+    getElement: (e) =>
+      find('button, [role="button"], a, div[role="button"]')(e) ||
+      find('svg[aria-label="Repost"], svg[aria-label="Unrepost"]')(e),
+    getConfirmation: (e, el) => {
+      const icon =
+        el.querySelector?.(
+          'svg[aria-label="Repost"], svg[aria-label="Unrepost"]'
+        ) ||
+        el.closest?.('svg[aria-label="Repost"], svg[aria-label="Unrepost"]') ||
+        el;
+      const isReposted =
+        icon.getAttribute("aria-label") === "Unrepost" ||
+        icon
+          .querySelector("path")
+          ?.getAttribute("d")
+          ?.includes("4.612-4.614");
+      return {
+        title: `Confirm ${isReposted ? "unrepost" : "repost"}`,
+        message: `Do you want to ${isReposted ? "unrepost" : "repost"} this?`,
+        confirmText: isReposted ? "Unrepost" : "Repost",
+      };
+    },
+    clickType: "full",
+  });
 }
 
-export function interceptTypingReceipts() {
-  // Wait for wsHook to be available, then set up hooks
-  const setupWsHook = () => {
-    if (typeof window.wsHook !== "undefined") {
-      console.log("Instafn: Setting up wsHook for typing receipts blocking");
-
-      // Set up the before hook to intercept outgoing messages
-      window.wsHook.before = function(data, url, wsObject) {
-        try {
-          // Check if this is a WebSocket to Instagram's chat service
-          if (
-            url &&
-            (url.includes("edge-chat.instagram.com") ||
-              url.includes("instagram.com"))
-          ) {
-            if (typeof data === "string") {
-              // Check for typing indicators in various formats
-              if (
-                data.includes('"is_typing":1') ||
-                data.includes('"is_typing": 1')
-              ) {
-                console.log("Instafn: Blocking typing receipt via wsHook");
-                return data.replace(/"is_typing":\s*1/g, '"is_typing":0');
-              }
-
-              // Also check for the specific payload format you mentioned
-              if (data.includes('"type":4') && data.includes('"is_typing":1')) {
-                console.log(
-                  "Instafn: Blocking typing receipt via wsHook (type 4)"
-                );
-                return data.replace(/"is_typing":\s*1/g, '"is_typing":0');
-              }
-            }
-          }
-        } catch (error) {
-          console.log(
-            "Instafn: Error processing typing receipt via wsHook:",
-            error
-          );
-        }
-
-        return data; // Return original data if no modification needed
-      };
-
-      // Set up the after hook for incoming messages (optional)
-      window.wsHook.after = function(event, url, wsObject) {
-        return event; // Pass through incoming messages unchanged
-      };
-    } else {
-      // If wsHook is not available yet, try again in 100ms
-      setTimeout(setupWsHook, 100);
-    }
-  };
-
-  // Start setting up wsHook
-  setupWsHook();
-
-  // Intercept fetch requests to edge-chat.instagram.com
-  const originalFetch = window.fetch;
-  window.fetch = function(...args) {
-    const [url, options] = args;
-
-    // Check if this is a request to edge-chat.instagram.com/chat
-    if (
-      typeof url === "string" &&
-      url.includes("edge-chat.instagram.com/chat")
-    ) {
-      // Check if this is a typing receipt request
-      if (options && options.body) {
-        try {
-          let body = options.body;
-
-          // Handle different body types
-          if (typeof body === "string") {
-            // Try to parse as JSON to check for typing indicators
-            try {
-              const parsed = JSON.parse(body);
-              if (parsed.payload) {
-                const payload = JSON.parse(parsed.payload);
-                if (payload.is_typing === 1) {
-                  console.log("Instafn: Blocking typing receipt via fetch");
-                  // Modify the payload to set is_typing to 0
-                  payload.is_typing = 0;
-                  parsed.payload = JSON.stringify(payload);
-                  options.body = JSON.stringify(parsed);
-                }
-              }
-            } catch (e) {
-              // If not JSON, check for the specific pattern in the request
-              if (body.includes('"is_typing":1')) {
-                console.log("Instafn: Blocking typing receipt via fetch");
-                options.body = body.replace('"is_typing":1', '"is_typing":0');
-              }
-            }
-          } else if (body instanceof FormData) {
-            // Handle FormData
-            const formData = new FormData();
-            for (let [key, value] of body.entries()) {
-              if (key === "payload" && typeof value === "string") {
-                try {
-                  const payload = JSON.parse(value);
-                  if (payload.is_typing === 1) {
-                    console.log(
-                      "Instafn: Blocking typing receipt via fetch (FormData)"
-                    );
-                    payload.is_typing = 0;
-                    formData.append(key, JSON.stringify(payload));
-                  } else {
-                    formData.append(key, value);
-                  }
-                } catch (e) {
-                  formData.append(key, value);
-                }
-              } else {
-                formData.append(key, value);
-              }
-            }
-            options.body = formData;
-          }
-        } catch (error) {
-          console.log("Instafn: Error processing typing receipt:", error);
-        }
-      }
-    }
-
-    return originalFetch.apply(this, args);
-  };
-
-  // Also intercept XMLHttpRequest for additional coverage
-  const originalXHROpen = XMLHttpRequest.prototype.open;
-  const originalXHRSend = XMLHttpRequest.prototype.send;
-
-  XMLHttpRequest.prototype.open = function(method, url, ...args) {
-    this._url = url;
-    return originalXHROpen.apply(this, [method, url, ...args]);
-  };
-
-  XMLHttpRequest.prototype.send = function(data) {
-    if (this._url && this._url.includes("edge-chat.instagram.com/chat")) {
-      if (data && typeof data === "string") {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.payload) {
-            const payload = JSON.parse(parsed.payload);
-            if (payload.is_typing === 1) {
-              console.log("Instafn: Blocking typing receipt via XHR");
-              payload.is_typing = 0;
-              parsed.payload = JSON.stringify(payload);
-              data = JSON.stringify(parsed);
-            }
-          }
-        } catch (e) {
-          if (data.includes('"is_typing":1')) {
-            console.log("Instafn: Blocking typing receipt via XHR");
-            data = data.replace('"is_typing":1', '"is_typing":0');
-          }
-        }
-      }
-    }
-    return originalXHRSend.call(this, data);
-  };
-}
+// Element manipulation helpers
+const getEl = (sel) =>
+  typeof sel === "string"
+    ? document.getElementById(sel) || document.querySelector(sel)
+    : sel instanceof Element
+    ? sel
+    : null;
 
 export function forceHoverOnElement(selectorOrElement) {
-  let element;
+  const el = getEl(selectorOrElement);
+  if (!el) return console.error("[Instafn] Element not found"), false;
 
-  if (typeof selectorOrElement === "string") {
-    // Try by ID first
-    element = document.getElementById(selectorOrElement);
-    // If not found, try as selector
-    if (!element) {
-      element = document.querySelector(selectorOrElement);
-    }
-  } else if (selectorOrElement instanceof Element) {
-    element = selectorOrElement;
-  } else {
-    console.error("forceHoverOnElement: Invalid selector or element");
-    return false;
-  }
-
-  if (!element) {
-    console.error("forceHoverOnElement: Element not found");
-    return false;
-  }
-
-  console.log("🖱️ Forcing hover on element:", element);
-
-  // Create and dispatch mouse events to simulate hover
-  const mouseEnter = new MouseEvent("mouseenter", {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    relatedTarget: null,
-  });
-
-  const mouseOver = new MouseEvent("mouseover", {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    relatedTarget: null,
-  });
-
-  const pointerEnter = new PointerEvent("pointerenter", {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    pointerType: "mouse",
-    relatedTarget: null,
-  });
-
-  const pointerOver = new PointerEvent("pointerover", {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    pointerType: "mouse",
-    relatedTarget: null,
-  });
-
-  // Dispatch events in order
-  try {
-    element.dispatchEvent(pointerEnter);
-    element.dispatchEvent(pointerOver);
-    element.dispatchEvent(mouseEnter);
-    element.dispatchEvent(mouseOver);
-
-    // Also trigger CSS :hover state by setting a class if needed
-    element.classList.add("force-hover");
-
-    console.log("✅ Hover events dispatched successfully");
-    return true;
-  } catch (error) {
-    console.error("❌ Error dispatching hover events:", error);
-    return false;
-  }
+  [
+    new PointerEvent("pointerenter", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      pointerType: "mouse",
+    }),
+    new PointerEvent("pointerover", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      pointerType: "mouse",
+    }),
+    new MouseEvent("mouseenter", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    }),
+    new MouseEvent("mouseover", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    }),
+  ].forEach((evt) => el.dispatchEvent(evt));
+  el.classList.add("force-hover");
+  return true;
 }
 
 export function keepElementClicked(selectorOrElement, duration = null) {
-  let element;
+  const el = getEl(selectorOrElement);
+  if (!el) return console.error("[Instafn] Element not found"), false;
 
-  if (typeof selectorOrElement === "string") {
-    // Try by ID first
-    element = document.getElementById(selectorOrElement);
-    // If not found, try as selector
-    if (!element) {
-      element = document.querySelector(selectorOrElement);
-    }
-  } else if (selectorOrElement instanceof Element) {
-    element = selectorOrElement;
-  } else {
-    console.error("keepElementClicked: Invalid selector or element");
-    return false;
-  }
+  [
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      pointerType: "mouse",
+      button: 0,
+      buttons: 1,
+    }),
+    new MouseEvent("mousedown", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      button: 0,
+      buttons: 1,
+    }),
+  ].forEach((evt) => el.dispatchEvent(evt));
+  el.classList.add("force-clicked");
+  el.setAttribute("data-force-clicked", "true");
 
-  if (!element) {
-    console.error("keepElementClicked: Element not found");
-    return false;
-  }
+  if (!window._instafnClickedElements)
+    window._instafnClickedElements = new Set();
+  window._instafnClickedElements.add(el);
 
-  console.log("🖱️ Keeping element clicked:", element);
-
-  // Create and dispatch mouse down events
-  const pointerDown = new PointerEvent("pointerdown", {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    pointerType: "mouse",
-    button: 0,
-    buttons: 1,
-  });
-
-  const mouseDown = new MouseEvent("mousedown", {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    button: 0,
-    buttons: 1,
-  });
-
-  // Dispatch down events
-  try {
-    element.dispatchEvent(pointerDown);
-    element.dispatchEvent(mouseDown);
-
-    // Add a class to indicate pressed state
-    element.classList.add("force-clicked");
-    element.setAttribute("data-force-clicked", "true");
-
-    // Store reference to element for cleanup
-    if (!window._instafnClickedElements) {
-      window._instafnClickedElements = new Set();
-    }
-    window._instafnClickedElements.add(element);
-
-    console.log("✅ Element is now in clicked state");
-
-    // If duration is specified, release after that time
-    if (duration && duration > 0) {
-      setTimeout(() => {
-        releaseElementClick(element);
-      }, duration);
-    }
-
-    return true;
-  } catch (error) {
-    console.error("❌ Error keeping element clicked:", error);
-    return false;
-  }
+  if (duration && duration > 0)
+    setTimeout(() => releaseElementClick(el), duration);
+  return true;
 }
 
 export function releaseElementClick(selectorOrElement) {
-  let element;
+  const el = getEl(selectorOrElement);
+  if (!el) return console.error("[Instafn] Element not found"), false;
 
-  if (typeof selectorOrElement === "string") {
-    element = document.getElementById(selectorOrElement);
-    if (!element) {
-      element = document.querySelector(selectorOrElement);
-    }
-  } else if (selectorOrElement instanceof Element) {
-    element = selectorOrElement;
-  } else {
-    console.error("releaseElementClick: Invalid selector or element");
-    return false;
-  }
-
-  if (!element) {
-    console.error("releaseElementClick: Element not found");
-    return false;
-  }
-
-  // Create and dispatch mouse up events
-  const pointerUp = new PointerEvent("pointerup", {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    pointerType: "mouse",
-    button: 0,
-    buttons: 0,
-  });
-
-  const mouseUp = new MouseEvent("mouseup", {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    button: 0,
-    buttons: 0,
-  });
-
-  const click = new MouseEvent("click", {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    button: 0,
-    buttons: 0,
-  });
-
-  try {
-    element.dispatchEvent(pointerUp);
-    element.dispatchEvent(mouseUp);
-    element.dispatchEvent(click);
-
-    // Remove pressed state
-    element.classList.remove("force-clicked");
-    element.removeAttribute("data-force-clicked");
-
-    // Remove from tracked elements
-    if (window._instafnClickedElements) {
-      window._instafnClickedElements.delete(element);
-    }
-
-    console.log("✅ Element click released");
-    return true;
-  } catch (error) {
-    console.error("❌ Error releasing element click:", error);
-    return false;
-  }
+  [
+    new PointerEvent("pointerup", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      pointerType: "mouse",
+      button: 0,
+      buttons: 0,
+    }),
+    new MouseEvent("mouseup", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      button: 0,
+      buttons: 0,
+    }),
+    new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      button: 0,
+      buttons: 0,
+    }),
+  ].forEach((evt) => el.dispatchEvent(evt));
+  el.classList.remove("force-clicked");
+  el.removeAttribute("data-force-clicked");
+  if (window._instafnClickedElements) window._instafnClickedElements.delete(el);
+  return true;
 }
 
-// Make it available globally for easy console access
 if (typeof window !== "undefined") {
   window.Instafn = window.Instafn || {};
   window.Instafn.forceHover = forceHoverOnElement;

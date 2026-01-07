@@ -87,19 +87,19 @@ async function testSupabaseConnection() {
     if (response.ok) {
       const data = await response.json();
       console.log(
-        "[Instafn Profile Comments] ✅ Supabase connection successful:",
+        "[Instafn Profile Comments] Supabase connection successful:",
         data
       );
       return true;
     } else {
       console.error(
-        `[Instafn Profile Comments] ❌ Supabase health check failed: ${response.status}`
+        `[Instafn Profile Comments] Supabase health check failed: ${response.status}`
       );
       return false;
     }
   } catch (error) {
     console.error(
-      "[Instafn Profile Comments] ❌ Supabase connection test failed:",
+      "[Instafn Profile Comments] Supabase connection test failed:",
       error
     );
     console.error("[Instafn Profile Comments] API_BASE_URL:", API_BASE_URL);
@@ -112,188 +112,142 @@ async function testSupabaseConnection() {
 }
 
 /**
- * Create the Comments button
- * Adapts to both own profile and others' profiles button styles
+ * Create the Comments button wrapper
+ * Clones the structure of a reference button to match Instagram's styling
  */
-function createCommentsButton() {
-  // Try to find a reference button to clone its structure
-  // First try Message button (other profiles)
-  let referenceBtn = Array.from(document.querySelectorAll("*")).find(
-    (el) =>
-      el.textContent?.trim() === "Message" &&
-      el.getAttribute("role") === "button"
-  );
-
-  // If no Message button, try Edit Profile button (own profile)
-  if (!referenceBtn) {
-    referenceBtn = Array.from(document.querySelectorAll("*")).find((el) => {
-      const text = el.textContent?.trim();
-      return (
-        (text === "Edit profile" || text === "Edit Profile") &&
-        el.getAttribute("role") === "button"
-      );
-    });
-  }
-
-  let buttonWrapper;
-  let button;
-
-  if (referenceBtn) {
-    // Clone the reference button's wrapper div
-    const referenceWrapper = referenceBtn.parentElement;
-    if (referenceWrapper && referenceWrapper.classList.contains("html-div")) {
-      buttonWrapper = referenceWrapper.cloneNode(true);
-      buttonWrapper.id = BUTTON_ID;
-      // Find the inner button element
-      button = buttonWrapper.querySelector('[role="button"]') || buttonWrapper;
-      // Clear existing content
-      button.innerHTML = "";
-    } else {
-      // Fallback: create wrapper and button
-      buttonWrapper = document.createElement("div");
-      buttonWrapper.className =
-        referenceWrapper?.className ||
-        "html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl x9f619 xjbqb8w x78zum5 x15mokao x1ga7v0g x16uus16 xbiv7yw x1n2onr6 x6ikm8r x10wlt62 x1iyjqo2 x2lwn1j xeuugli xdt5ytf xqjyukv x1qjc9v5 x1oa3qoh x1nhvcw1";
-      button = document.createElement("div");
-      button.className =
-        referenceBtn.className ||
-        "x1i10hfl xjqpnuy xc5r6h4 xqeqjp1 x1phubyo x972fbf x10w94by x1qhh985 x14e42zd xdl72j9 x2lah0s x3ct3a4 xdj266r x14z9mp xat24cr x1lziwak x2lwn1j xeuugli xexx8yu x18d9i69 x1hl2dhg xggy1nq x1ja2u2z x1t137rt x1q0g3np x1lku1pv x1a2a7pz x6s0dn4 xjyslct x1ejq31n x18oe1m7 x1sy0etr xstzfhl x9f619 x1ypdohk x78zum5 x1f6kntn xwhw2v2 xl56j7k x17ydfre x1n2onr6 x2b8uid xlyipyv x87ps6o x14atkfc x5c86q x18br7mf x1i0vuye x6nl9eh x1a5l9x9 x7vuprf x1mg3h75 xn3w4p2 x106a9eq x1xnnf8n x1aavi5t x1h6iz8e xixcex4 xk4oym4 xl3ioum";
-      buttonWrapper.appendChild(button);
-    }
-  } else {
-    // Fallback: create wrapper and button from scratch
-    buttonWrapper = document.createElement("div");
-    buttonWrapper.className =
-      "html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl x9f619 xjbqb8w x78zum5 x15mokao x1ga7v0g x16uus16 xbiv7yw x1n2onr6 x6ikm8r x10wlt62 x1iyjqo2 x2lwn1j xeuugli xdt5ytf xqjyukv x1qjc9v5 x1oa3qoh x1nhvcw1";
-    button = document.createElement("div");
-    button.className =
-      "x1i10hfl xjqpnuy xc5r6h4 xqeqjp1 x1phubyo x972fbf x10w94by x1qhh985 x14e42zd xdl72j9 x2lah0s x3ct3a4 xdj266r x14z9mp xat24cr x1lziwak x2lwn1j xeuugli xexx8yu x18d9i69 x1hl2dhg xggy1nq x1ja2u2z x1t137rt x1q0g3np x1lku1pv x1a2a7pz x6s0dn4 xjyslct x1ejq31n x18oe1m7 x1sy0etr xstzfhl x9f619 x1ypdohk x78zum5 x1f6kntn xwhw2v2 xl56j7k x17ydfre x1n2onr6 x2b8uid xlyipyv x87ps6o x14atkfc x5c86q x18br7mf x1i0vuye x6nl9eh x1a5l9x9 x7vuprf x1mg3h75 xn3w4p2 x106a9eq x1xnnf8n x1aavi5t x1h6iz8e xixcex4 xk4oym4 xl3ioum";
-    buttonWrapper.appendChild(button);
-  }
-
+function createCommentsButton(referenceWrapper) {
+  // Clone the reference wrapper's structure
+  const buttonWrapper = document.createElement("div");
+  buttonWrapper.className = referenceWrapper?.className || "html-div";
   buttonWrapper.id = BUTTON_ID;
+
+  // Create the button element - match Instagram's button structure
+  const button = document.createElement("div");
   button.setAttribute("role", "button");
   button.setAttribute("tabindex", "0");
   button.setAttribute("aria-label", "Comments");
+  button.style.cursor = "pointer";
   button.innerHTML = `
     <div class="x6s0dn4 x78zum5 xdt5ytf xl56j7k">
-      <svg aria-label="Comments" class="x1lliihq x1n2onr6 x5n08af" fill="currentColor" height="16" role="img" viewBox="0 0 24 24" width="16">
-        <title>Comments</title>
-        <path d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22l-1.344-4.992zm-2.883-4.18a7.5 7.5 0 1 1-2.828-2.828l1.414 1.414a5 5 0 0 0 0 7.07l1.414 1.414z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+      <svg aria-label="Comment" class="x1lliihq x1n2onr6 x5n08af" fill="currentColor" height="16" role="img" viewBox="0 0 24 24" width="16">
+        <title>Comment</title>
+        <path d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="2"></path>
       </svg>
     </div>
     <div class="_ap3a _aaco _aacw _aad6 _aade" dir="auto">Comments</div>
   `;
-  button.style.cursor = "pointer";
   button.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     handleCommentsButtonClick();
   });
 
+  buttonWrapper.appendChild(button);
   return buttonWrapper;
 }
 
 /**
- * Find the button container to inject next to
- * Works for both own profile (Edit Profile) and others' profiles (Following/Message)
+ * Find a reference button that exists on all profile types
+ * Returns: { button, wrapper, container } or null
+ * Works for: own profile (Edit Profile), followed profiles (Message/Following), unfollowed profiles (Follow)
  */
-function findButtonContainer() {
-  // First, try to find Message button (other profiles)
-  const messageButtons = Array.from(document.querySelectorAll("*")).filter(
-    (el) => {
-      const text = el.textContent?.trim();
-      return text === "Message" && el.getAttribute("role") === "button";
-    }
-  );
+function findReferenceButton() {
+  // Try to find any of these buttons in order of preference:
+  // 1. Message button (profiles you follow)
+  // 2. Follow button (profiles you don't follow)
+  // 3. Edit Profile button (own profile)
+  // 4. Following button (profiles you follow)
 
-  // If Message button found, use it
-  if (messageButtons.length > 0) {
-    for (const msgBtn of messageButtons) {
-      let current = msgBtn.parentElement;
+  const buttonTexts = [
+    "Message",
+    "Follow",
+    "View archive", // On own profile, inject after this
+    "Edit profile",
+    "Edit Profile",
+    "Following",
+  ];
 
-      while (current) {
-        const siblings = Array.from(current.children || []);
-
-        const hasFollowingBtn = siblings.some((s) => {
-          const text = s.textContent || "";
-          return text.includes("Following") || text.includes("Follow");
-        });
-        const hasMessageBtn = siblings.some((s) => {
-          const text = s.textContent?.trim() || "";
-          return (
-            text === "Message" ||
-            s.querySelector('[role="button"]')?.textContent?.trim() ===
-              "Message"
-          );
-        });
-
-        if ((hasFollowingBtn || hasMessageBtn) && siblings.length >= 2) {
-          const isInHeader =
-            current.closest("header") || current.closest("section");
-          if (isInHeader) {
-            return current;
-          }
-        }
-
-        current = current.parentElement;
-        if (
-          !current ||
-          current.tagName === "BODY" ||
-          current.tagName === "HTML"
-        ) {
-          break;
-        }
-      }
-    }
-  }
-
-  // If no Message button, try to find Edit Profile button (own profile)
-  const editProfileButtons = Array.from(document.querySelectorAll("*")).filter(
-    (el) => {
-      const text = el.textContent?.trim();
-      return (
-        (text === "Edit profile" || text === "Edit Profile") &&
-        el.getAttribute("role") === "button"
+  // First, find the header or main section that contains profile buttons
+  const header = document.querySelector("header");
+  const sections = Array.from(document.querySelectorAll("section")).filter(
+    (section) => {
+      // Look for sections that contain button-like elements (including links like "Edit profile")
+      const hasButtons = section.querySelector(
+        "button, [role='button'], a[role='link']"
       );
+      return !!hasButtons;
     }
   );
 
-  if (editProfileButtons.length > 0) {
-    for (const editBtn of editProfileButtons) {
-      let current = editBtn.parentElement;
+  const targetContainers = [];
+  if (header) targetContainers.push(header);
+  targetContainers.push(...sections);
 
-      while (current) {
-        const siblings = Array.from(current.children || []);
+  for (const buttonText of buttonTexts) {
+    // Look for buttons, elements with role="button", and links that act as buttons (like "Edit profile" on own profile)
+    const allButtons = Array.from(
+      document.querySelectorAll("button, [role='button'], a[role='link']")
+    );
 
-        // On own profile, look for Edit Profile button
-        const hasEditBtn = siblings.some((s) => {
-          const text = s.textContent?.trim() || "";
-          return (
-            text === "Edit profile" ||
-            text === "Edit Profile" ||
-            s.querySelector('[role="button"]')?.textContent?.trim() ===
-              "Edit profile" ||
-            s.querySelector('[role="button"]')?.textContent?.trim() ===
-              "Edit Profile"
+    const buttons = allButtons.filter((el) => {
+      const text = el.textContent?.trim();
+      return text === buttonText;
+    });
+
+    if (buttons.length > 0) {
+      for (const btn of buttons) {
+        // Check if button is in one of our target containers
+        const container = targetContainers.find((c) => c.contains(btn));
+        if (!container) continue;
+
+        // Find the wrapper - use closest .html-div (same pattern as follow analyzer)
+        let wrapper = btn.closest(".html-div");
+        if (!wrapper) continue;
+
+        // Find the container that holds button wrappers
+        // Walk up from wrapper to find a container that has multiple .html-div children
+        let current = wrapper.parentElement;
+        let foundContainer = null;
+
+        while (current && current !== document.body) {
+          // Check if current has multiple .html-div children (indicating it's the button row container)
+          const buttonWrappers = Array.from(current.children || []).filter(
+            (child) => child.classList && child.classList.contains("html-div")
           );
-        });
 
-        if (hasEditBtn && siblings.length >= 1) {
-          const isInHeader =
-            current.closest("header") || current.closest("section");
-          if (isInHeader) {
-            return current;
+          if (buttonWrappers.length >= 1 && container.contains(current)) {
+            foundContainer = current;
+            // Find the wrapper that's a direct child of this container
+            let currentWrapper = wrapper;
+            while (
+              currentWrapper &&
+              currentWrapper.parentElement !== foundContainer
+            ) {
+              const parent = currentWrapper.parentElement;
+              if (
+                parent &&
+                parent.classList &&
+                parent.classList.contains("html-div")
+              ) {
+                currentWrapper = parent;
+              } else {
+                break;
+              }
+            }
+            if (
+              currentWrapper &&
+              currentWrapper.parentElement === foundContainer
+            ) {
+              wrapper = currentWrapper;
+            }
+            break;
           }
+
+          current = current.parentElement;
         }
 
-        current = current.parentElement;
-        if (
-          !current ||
-          current.tagName === "BODY" ||
-          current.tagName === "HTML"
-        ) {
-          break;
+        if (foundContainer) {
+          return { button: btn, wrapper, container: foundContainer };
         }
       }
     }
@@ -302,124 +256,86 @@ function findButtonContainer() {
   return null;
 }
 
+let isInjecting = false;
+let retryCount = 0;
+const MAX_RETRIES = 5;
+
 /**
  * Inject the Comments button
+ * Works on all profile types: own profile, followed profiles, unfollowed profiles
  */
 function injectCommentsButton() {
   if (!isEnabled) return;
+  if (isInjecting) return;
 
   const username = getProfileUsernameFromPath();
   if (!username) {
     const existing = document.getElementById(BUTTON_ID);
     if (existing) existing.remove();
     currentUsername = null;
+    retryCount = 0;
     return;
   }
 
-  // Inject button on all profiles (own and others)
+  // Check if button already exists for this profile
   const existing = document.getElementById(BUTTON_ID);
   if (existing && currentUsername === username) {
-    console.log(
-      "[Instafn Profile Comments] Button already exists for this profile"
-    );
-    return;
+    return; // Already injected for this profile
   }
 
+  // Remove button if it's for a different profile
   if (existing && currentUsername !== username) {
-    console.log(
-      "[Instafn Profile Comments] Removing existing button for different profile"
-    );
     existing.remove();
   }
 
   currentUsername = username;
-  const container = findButtonContainer();
-  if (!container) {
-    console.log("[Instafn Profile Comments] Container not found, retrying...");
-    setTimeout(injectCommentsButton, 500);
+
+  // Find reference button (Message, Follow, Edit Profile, or Following)
+  const reference = findReferenceButton();
+  if (!reference) {
+    if (retryCount < MAX_RETRIES) {
+      retryCount++;
+      console.log(
+        `[Instafn Profile Comments] Reference button not found, retrying... (${retryCount}/${MAX_RETRIES})`
+      );
+      setTimeout(injectCommentsButton, 500);
+    } else {
+      console.warn(
+        "[Instafn Profile Comments] Max retries reached, giving up on button injection"
+      );
+      retryCount = 0;
+    }
     return;
   }
 
   // Check if button already exists in this container
-  if (container.querySelector(`#${BUTTON_ID}`)) {
-    console.log(
-      "[Instafn Profile Comments] Button already exists in container"
-    );
+  if (reference.container.querySelector(`#${BUTTON_ID}`)) {
+    retryCount = 0;
     return;
   }
 
-  console.log(
-    "[Instafn Profile Comments] Found container, injecting button...",
-    container
-  );
+  isInjecting = true;
+  try {
+    // Add instafn-button-container class to ensure equal flex distribution (same pattern as follow analyzer)
+    reference.container.classList.add("instafn-button-container");
 
-  const button = createCommentsButton();
+    // Create button wrapper matching the reference wrapper's style
+    const buttonWrapper = createCommentsButton(reference.wrapper);
 
-  // Find the reference button wrapper to insert after
-  // Try Message button first (other profiles)
-  let referenceBtnWrapper = null;
-  for (const child of Array.from(container.children)) {
-    const btn = child.querySelector('[role="button"]');
-    if (btn && btn.textContent?.trim() === "Message") {
-      referenceBtnWrapper = child;
-      break;
-    }
-    // Also check direct children
-    if (
-      child.textContent?.trim() === "Message" &&
-      child.getAttribute("role") === "button"
-    ) {
-      referenceBtnWrapper = child;
-      break;
-    }
-  }
-
-  // If no Message button, try Edit Profile button (own profile)
-  if (!referenceBtnWrapper) {
-    for (const child of Array.from(container.children)) {
-      const btn = child.querySelector('[role="button"]');
-      const text = btn?.textContent?.trim() || "";
-      if (text === "Edit profile" || text === "Edit Profile") {
-        referenceBtnWrapper = child;
-        break;
-      }
-      // Also check direct children
-      const childText = child.textContent?.trim() || "";
-      if (
-        (childText === "Edit profile" || childText === "Edit Profile") &&
-        child.getAttribute("role") === "button"
-      ) {
-        referenceBtnWrapper = child;
-        break;
-      }
-    }
-  }
-
-  if (referenceBtnWrapper) {
-    // Insert right after reference button wrapper
-    if (referenceBtnWrapper.nextSibling) {
-      container.insertBefore(button, referenceBtnWrapper.nextSibling);
-    } else {
-      container.appendChild(button);
-    }
-    console.log(
-      "[Instafn Profile Comments] Button injected after reference button"
-    );
-  } else {
-    // If no reference button found, try to find Similar accounts button and insert before it
-    const similarBtn = Array.from(container.children).find((el) =>
-      el.querySelector('svg[aria-label="Similar accounts"]')
-    );
-    if (similarBtn) {
-      container.insertBefore(button, similarBtn);
-      console.log(
-        "[Instafn Profile Comments] Button injected before Similar accounts"
+    // Insert right after the reference wrapper (same pattern as follow analyzer)
+    if (reference.wrapper.nextSibling) {
+      reference.container.insertBefore(
+        buttonWrapper,
+        reference.wrapper.nextSibling
       );
     } else {
-      // Last resort: append to container
-      container.appendChild(button);
-      console.log("[Instafn Profile Comments] Button appended to container");
+      reference.container.appendChild(buttonWrapper);
     }
+
+    console.log("[Instafn Profile Comments] Button injected successfully");
+    retryCount = 0;
+  } finally {
+    isInjecting = false;
   }
 }
 
@@ -506,8 +422,9 @@ async function getUserProfilePic(username) {
 
 /**
  * Create a comment element matching Instagram's exact structure
+ * Uses placeholder images initially - profile pics are lazy loaded
  */
-async function createCommentElement(comment, currentUser) {
+function createCommentElement(comment, currentUser) {
   const li = document.createElement("li");
   li.className = "_a9zj _a9zl";
   li.dataset.commentId = comment.id;
@@ -524,7 +441,6 @@ async function createCommentElement(comment, currentUser) {
   const isOwnComment = currentUser && comment.userId === currentUser.userId;
 
   // CRITICAL: Use comment.username (the commenter's username), NOT profileUsername
-  // Fetch profile picture for the COMMENTER, not the profile owner
   const commenterUsername = comment.username;
   if (!commenterUsername) {
     console.error(
@@ -533,14 +449,12 @@ async function createCommentElement(comment, currentUser) {
     );
   }
 
-  const profilePic =
-    (await getUserProfilePic(commenterUsername)) ||
+  // Use placeholder image initially - will be lazy loaded
+  const placeholderPic =
     "https://instagram.com/static/images/anonymousUser.jpg/23e7b3b2a737.jpg";
 
-  console.log(
-    `[Instafn Profile Comments] Fetched profile pic for ${commenterUsername}:`,
-    profilePic
-  );
+  // Store username in data attribute for lazy loading
+  li.dataset.commenterUsername = commenterUsername;
 
   li.innerHTML = `
     <div class="_a9zm">
@@ -548,7 +462,9 @@ async function createCommentElement(comment, currentUser) {
         <a href="/${escapeHtml(commenterUsername)}/" role="link" tabindex="0">
           <img alt="${escapeHtml(
             commenterUsername
-          )}'s profile picture" crossorigin="anonymous" draggable="false" src="${profilePic}">
+          )}'s profile picture" crossorigin="anonymous" draggable="false" src="${placeholderPic}" data-username="${escapeHtml(
+    commenterUsername
+  )}" class="instafn-lazy-profile-pic">
         </a>
       </div>
       <div class="_a9zr">
@@ -603,14 +519,12 @@ async function createCommentElement(comment, currentUser) {
           comment.replies.length
         })</button>
         <ul class="_a9ym" style="display: none;">
-            ${(
-              await Promise.all(
-                comment.replies.map(async (reply) => {
-                  const replyPic =
-                    (await getUserProfilePic(reply.username)) ||
-                    "https://instagram.com/static/images/anonymousUser.jpg/23e7b3b2a737.jpg";
-                  return `
-                <li class="_a9zj _a9zl">
+            ${comment.replies
+              .map((reply) => {
+                return `
+                <li class="_a9zj _a9zl" data-reply-username="${escapeHtml(
+                  reply.username
+                )}">
                     <div class="_a9zm">
                     <div class="_a9zn _a9zo">
                       <a href="/${escapeHtml(
@@ -618,7 +532,9 @@ async function createCommentElement(comment, currentUser) {
                       )}/" role="link" tabindex="0" style="height: 32px; width: 32px; display: block;">
                         <img alt="${escapeHtml(
                           reply.username
-                        )}'s profile picture" crossorigin="anonymous" draggable="false" src="${replyPic}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                        )}'s profile picture" crossorigin="anonymous" draggable="false" src="${placeholderPic}" data-username="${escapeHtml(
+                  reply.username
+                )}" class="instafn-lazy-profile-pic" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
                       </a>
                     </div>
                     <div class="_a9zr">
@@ -626,8 +542,8 @@ async function createCommentElement(comment, currentUser) {
                         <a class="instafn-comment-username" href="/${escapeHtml(
                           reply.username
                         )}/" role="link" tabindex="0">${escapeHtml(
-                    reply.username
-                  )}</a>
+                  reply.username
+                )}</a>
                         <span class="instafn-comment-text">${escapeHtml(
                           reply.text
                         )}</span>
@@ -636,8 +552,8 @@ async function createCommentElement(comment, currentUser) {
                         <time class="instafn-comment-time" datetime="${new Date(
                           reply.createdAt
                         ).toISOString()}" title="${formatFullDate(
-                    reply.createdAt
-                  )}">${formatRelativeTime(reply.createdAt)}</time>
+                  reply.createdAt
+                )}">${formatRelativeTime(reply.createdAt)}</time>
                         <span class="instafn-comment-likes-count">${reply.likes ||
                           0} ${reply.likes === 1 ? "like" : "likes"}</span>
                         <button class="instafn-comment-reply-btn" data-comment-id="${
@@ -659,22 +575,21 @@ async function createCommentElement(comment, currentUser) {
                         <svg aria-label="Like" class="instafn-heart-icon" fill="${
                           reply.liked ? "rgb(237, 73, 86)" : "none"
                         }" height="12" role="img" viewBox="0 0 24 24" width="12"><title>Like</title><path d="${
-                    reply.liked
-                      ? "M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"
-                      : "M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938m0-2a6.04 6.04 0 0 0-4.797 2.127 6.052 6.052 0 0 0-4.787-2.127A6.985 6.985 0 0 0 .5 9.122c0 3.61 2.55 5.827 5.015 7.97.283.246.569.494.853.747l1.027.918a44.998 44.998 0 0 0 3.518 3.018 2 2 0 0 0 2.174 0 45.263 45.263 0 0 0 3.626-3.115l.922-.824c.293-.26.59-.519.885-.774 2.334-2.025 4.98-4.32 4.98-7.94a6.985 6.985 0 0 0-6.708-7.218Z"
-                  }" fill="${
-                    reply.liked ? "rgb(237, 73, 86)" : "currentColor"
-                  }" stroke="${
-                    reply.liked ? "none" : "currentColor"
-                  }" stroke-width="${reply.liked ? "0" : "1.5"}"></path></svg>
+                  reply.liked
+                    ? "M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"
+                    : "M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938m0-2a6.04 6.04 0 0 0-4.797 2.127 6.052 6.052 0 0 0-4.787-2.127A6.985 6.985 0 0 0 .5 9.122c0 3.61 2.55 5.827 5.015 7.97.283.246.569.494.853.747l1.027.918a44.998 44.998 0 0 0 3.518 3.018 2 2 0 0 0 2.174 0 45.263 45.263 0 0 0 3.626-3.115l.922-.824c.293-.26.59-.519.885-.774 2.334-2.025 4.98-4.32 4.98-7.94a6.985 6.985 0 0 0-6.708-7.218Z"
+                }" fill="${
+                  reply.liked ? "rgb(237, 73, 86)" : "currentColor"
+                }" stroke="${
+                  reply.liked ? "none" : "currentColor"
+                }" stroke-width="${reply.liked ? "0" : "1.5"}"></path></svg>
                       </div>
                     </span>
                   </div>
                 </li>
               `;
-                })
-              )
-            ).join("")}
+              })
+              .join("")}
         </ul>
       </div>
     `
@@ -712,12 +627,16 @@ async function createCommentElement(comment, currentUser) {
     viewRepliesBtn.addEventListener("click", () => {
       const repliesList = li.querySelector("._a9ym");
       if (repliesList) {
-        repliesList.style.display =
-          repliesList.style.display === "none" ? "block" : "none";
-        viewRepliesBtn.textContent =
-          repliesList.style.display === "none"
-            ? `View replies (${comment.replies.length})`
-            : `Hide replies (${comment.replies.length})`;
+        const isShowing = repliesList.style.display !== "none";
+        repliesList.style.display = isShowing ? "none" : "block";
+        viewRepliesBtn.textContent = isShowing
+          ? `View replies (${comment.replies.length})`
+          : `Hide replies (${comment.replies.length})`;
+
+        // Lazy load profile pics when replies are shown
+        if (!isShowing) {
+          lazyLoadProfilePics(repliesList);
+        }
       }
     });
   }
@@ -860,7 +779,7 @@ function tryExtractUserIdFromPage(username) {
         const userId = String(data.user.id || data.user.pk);
         if (data.user.username === username) {
           console.log(
-            `[Instafn Profile Comments] ✅ Extracted userId from window.__additionalData: ${userId}`
+            `[Instafn Profile Comments]  Extracted userId from window.__additionalData: ${userId}`
           );
           return userId;
         }
@@ -882,7 +801,7 @@ function tryExtractUserIdFromPage(username) {
                   const userId = String(state.user.id || state.user.pk);
                   if (state.user.username === username) {
                     console.log(
-                      `[Instafn Profile Comments] ✅ Extracted userId from React state: ${userId}`
+                      `[Instafn Profile Comments]  Extracted userId from React state: ${userId}`
                     );
                     return userId;
                   }
@@ -909,7 +828,7 @@ function tryExtractUserIdFromPage(username) {
         sessionStorage.getItem("ig_user_id");
       if (cached) {
         console.log(
-          `[Instafn Profile Comments] ⚠️ Found cached userId: ${cached} (may be stale)`
+          `[Instafn Profile Comments]  Found cached userId: ${cached} (may be stale)`
         );
         return cached;
       }
@@ -968,7 +887,7 @@ async function getVerifiedCurrentUser() {
       // If we have username but no userId, try extracting from page
       if (username && !userId) {
         console.log(
-          "[Instafn Profile Comments] ⚠️ Have username but no userId. Trying to extract from page..."
+          "[Instafn Profile Comments]  Have username but no userId. Trying to extract from page..."
         );
         const extractedUserId = tryExtractUserIdFromPage(username);
         if (extractedUserId) {
@@ -979,13 +898,13 @@ async function getVerifiedCurrentUser() {
       // Validate username before returning
       if (username && username.trim() !== "" && userId) {
         console.log(
-          `[Instafn Profile Comments] ✅ Verified logged-in user from edit endpoint: ${username} (${userId})`
+          `[Instafn Profile Comments]  Verified logged-in user from edit endpoint: ${username} (${userId})`
         );
         return { username: username.trim(), userId };
       } else if (username && !userId) {
         // If we have username but no userId, fetch userId from profile lookup
         console.log(
-          "[Instafn Profile Comments] ⚠️ Have username but no userId. Fetching userId from profile lookup..."
+          "[Instafn Profile Comments]  Have username but no userId. Fetching userId from profile lookup..."
         );
         try {
           const profileData = await safeFetchJson(
@@ -1008,7 +927,7 @@ async function getVerifiedCurrentUser() {
 
           if (fetchedUserId) {
             console.log(
-              `[Instafn Profile Comments] ✅ Got userId from profile lookup: ${username} (${fetchedUserId})`
+              `[Instafn Profile Comments]  Got userId from profile lookup: ${username} (${fetchedUserId})`
             );
             // Cache it for future use
             try {
@@ -1019,12 +938,12 @@ async function getVerifiedCurrentUser() {
             return { username: username.trim(), userId: fetchedUserId };
           } else {
             console.error(
-              "[Instafn Profile Comments] ❌ Profile lookup didn't return userId"
+              "[Instafn Profile Comments]  Profile lookup didn't return userId"
             );
           }
         } catch (e) {
           console.error(
-            "[Instafn Profile Comments] ❌ Failed to get userId from profile lookup:",
+            "[Instafn Profile Comments]  Failed to get userId from profile lookup:",
             e
           );
           // If rate limited, allow posting with username only IF we have a valid username
@@ -1036,7 +955,7 @@ async function getVerifiedCurrentUser() {
             username.trim() !== ""
           ) {
             console.warn(
-              "[Instafn Profile Comments] ⚠️ Rate limited - will attempt with username only. Backend will look up userId during verification."
+              "[Instafn Profile Comments]  Rate limited - will attempt with username only. Backend will look up userId during verification."
             );
             return { username: username.trim(), userId: null };
           }
@@ -1044,12 +963,12 @@ async function getVerifiedCurrentUser() {
         }
       } else {
         console.warn(
-          "[Instafn Profile Comments] ⚠️ Edit endpoint returned incomplete data:",
+          "[Instafn Profile Comments]  Edit endpoint returned incomplete data:",
           { username, userId, data }
         );
       }
     } catch (e) {
-      console.error("[Instafn Profile Comments] ❌ Edit endpoint failed:", e);
+      console.error("[Instafn Profile Comments]  Edit endpoint failed:", e);
       // Continue to next method
     }
 
@@ -1071,14 +990,14 @@ async function getVerifiedCurrentUser() {
 
       if (username && userId) {
         console.log(
-          `[Instafn Profile Comments] ✅ Verified logged-in user from current_user endpoint: ${username} (${userId})`
+          `[Instafn Profile Comments]  Verified logged-in user from current_user endpoint: ${username} (${userId})`
         );
         return { username: username.trim(), userId };
       }
     } catch (e) {
       // This endpoint often fails with 400, so we just log and continue
       console.warn(
-        "[Instafn Profile Comments] ⚠️ current_user endpoint failed (this is normal):",
+        "[Instafn Profile Comments]  current_user endpoint failed (this is normal):",
         e.message || e
       );
     }
@@ -1114,19 +1033,19 @@ async function getVerifiedCurrentUser() {
 
         if (username && userId) {
           console.log(
-            `[Instafn Profile Comments] ✅ Verified logged-in user (retry): ${username} (${userId})`
+            `[Instafn Profile Comments]  Verified logged-in user (retry): ${username} (${userId})`
           );
           return { username: username.trim(), userId };
         }
       }
     } catch (e) {
-      console.error("[Instafn Profile Comments] ❌ Final retry failed:", e);
+      console.error("[Instafn Profile Comments]  Final retry failed:", e);
     }
 
     throw new Error("Could not verify user identity - all methods failed");
   } catch (error) {
     console.error(
-      "[Instafn Profile Comments] ❌ Error getting verified user:",
+      "[Instafn Profile Comments]  Error getting verified user:",
       error
     );
     throw error;
@@ -1180,7 +1099,7 @@ async function postComment(profileUsername, text, parentId = null) {
     // CRITICAL: This must return the logged-in user, NOT the profile owner
     // ALWAYS fetch fresh - never use cache
     console.log(
-      `[Instafn Profile Comments] 🔍 Fetching verified current user (fresh fetch)...`
+      `[Instafn Profile Comments]  Fetching verified current user (fresh fetch)...`
     );
     const currentUser = await getVerifiedCurrentUser();
 
@@ -1199,27 +1118,27 @@ async function postComment(profileUsername, text, parentId = null) {
     // The backend will need to look up userId from username during verification
     if (!currentUser.userId) {
       console.warn(
-        "[Instafn Profile Comments] ⚠️ No userId available (rate limited). Will attempt with username only - backend will look up userId."
+        "[Instafn Profile Comments]  No userId available (rate limited). Will attempt with username only - backend will look up userId."
       );
     }
 
     // CRITICAL VALIDATION: Ensure we're not using the profile owner's username
     if (currentUser.username === profileUsername) {
       console.warn(
-        `[Instafn Profile Comments] ⚠️ WARNING: Current user matches profile username. This is OK if commenting on own profile, but verifying...`
+        `[Instafn Profile Comments]  WARNING: Current user matches profile username. This is OK if commenting on own profile, but verifying...`
       );
     }
 
     console.log(
-      `[Instafn Profile Comments] ✅ Posting comment as LOGGED-IN USER: ${
+      `[Instafn Profile Comments]  Posting comment as LOGGED-IN USER: ${
         currentUser.username
       } (ID: ${currentUser.userId || "will be looked up by backend"})`
     );
     console.log(
-      `[Instafn Profile Comments] 📝 Commenting on profile: ${profileUsername}`
+      `[Instafn Profile Comments]  Commenting on profile: ${profileUsername}`
     );
     console.log(
-      `[Instafn Profile Comments] 🔐 Verification: currentUser.username="${currentUser.username}" vs profileUsername="${profileUsername}"`
+      `[Instafn Profile Comments]  Verification: currentUser.username="${currentUser.username}" vs profileUsername="${profileUsername}"`
     );
 
     // Get profile user ID
@@ -1584,6 +1503,55 @@ async function showCommentsSidebar() {
 }
 
 /**
+ * Lazy load profile pictures for all comments
+ */
+async function lazyLoadProfilePics(container) {
+  // Find all images that need to be loaded
+  const images = container.querySelectorAll("img.instafn-lazy-profile-pic");
+
+  // Get unique usernames to avoid duplicate fetches
+  const usernameToImg = new Map();
+  images.forEach((img) => {
+    const username = img.dataset.username;
+    if (username && !usernameToImg.has(username)) {
+      usernameToImg.set(username, []);
+    }
+    if (username) {
+      usernameToImg.get(username).push(img);
+    }
+  });
+
+  // Load all profile pictures in parallel
+  const loadPromises = Array.from(usernameToImg.entries()).map(
+    async ([username, imgElements]) => {
+      try {
+        const profilePic =
+          (await getUserProfilePic(username)) ||
+          "https://instagram.com/static/images/anonymousUser.jpg/23e7b3b2a737.jpg";
+
+        // Update all images for this username
+        imgElements.forEach((img) => {
+          img.src = profilePic;
+        });
+      } catch (error) {
+        console.warn(
+          `[Instafn Profile Comments] Failed to load profile pic for ${username}:`,
+          error
+        );
+      }
+    }
+  );
+
+  // Load all in parallel - don't wait, just fire and forget
+  Promise.all(loadPromises).catch((error) => {
+    console.error(
+      "[Instafn Profile Comments] Error loading profile pictures:",
+      error
+    );
+  });
+}
+
+/**
  * Render comments in container
  */
 async function renderComments(container, comments, username) {
@@ -1623,11 +1591,19 @@ async function renderComments(container, comments, username) {
   container.innerHTML = '<ul class="_a9ym"></ul>';
   const commentsList = container.querySelector("._a9ym");
 
-  // Create comments sequentially to avoid race conditions
-  for (const comment of comments) {
-    const commentEl = await createCommentElement(comment, currentUser);
+  // Create all comments synchronously (no async operations)
+  // This makes them appear instantly
+  const commentElements = comments.map((comment) =>
+    createCommentElement(comment, currentUser)
+  );
+
+  // Append all comments at once
+  commentElements.forEach((commentEl) => {
     commentsList.appendChild(commentEl);
-  }
+  });
+
+  // Lazy load profile pictures in the background
+  lazyLoadProfilePics(container);
 }
 
 /**
@@ -1717,6 +1693,7 @@ export function initProfileComments() {
       if (newProfileUsername !== lastProfileUsername) {
         lastProfileUsername = newProfileUsername;
         currentUsername = null;
+        retryCount = 0; // Reset retry count on profile change
         if (sidebarOpen) {
           closeCommentsSidebar();
         }
@@ -1763,4 +1740,5 @@ export function disableProfileComments() {
   }
 
   currentUsername = null;
+  retryCount = 0;
 }

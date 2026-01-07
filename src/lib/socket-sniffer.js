@@ -51,7 +51,7 @@
           
           // ALWAYS check for is_typing and set it to 0, regardless of current value
           if (dataStr && dataStr.includes('is_typing')) {
-            console.log('[Instafn] ✅ User is typing - DETECTED! Blocking...');
+            console.log('[Instafn]  User is typing - DETECTED! Blocking...');
             var modified = false;
             var modifiedStr = dataStr;
             
@@ -111,7 +111,7 @@
                 var encoder = new TextEncoder();
                 modifiedData = encoder.encode(modifiedStr);
               }
-              console.log('[Instafn] ✅ Typing receipt blocked - is_typing is now 0');
+              console.log('[Instafn]  Typing receipt blocked - is_typing is now 0');
             }
           }
           

@@ -23,8 +23,10 @@ const isElementVisible = (el) => {
   if (!el) return false;
   const style = window.getComputedStyle(el);
   if (style.display === "none" || style.visibility === "hidden") return false;
-  const rect = el.getBoundingClientRect();
-  return rect.width > 0 && rect.height > 0;
+  return (
+    el.getBoundingClientRect().width > 0 &&
+    el.getBoundingClientRect().height > 0
+  );
 };
 
 function findArchiveButton() {
@@ -32,12 +34,9 @@ function findArchiveButton() {
     document.querySelector('main[role="main"]') ||
     document.querySelector("main") ||
     document.body;
-
-  const candidates = Array.from(
+  return Array.from(
     mainRoot.querySelectorAll('a[href="/archive/stories/"]')
-  );
-
-  return candidates.find(
+  ).find(
     (el) =>
       !el.closest("nav") &&
       !el.closest('[role="navigation"]') &&
@@ -57,19 +56,16 @@ export function createFollowButton(
   btn.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
-
     btn.disabled = true;
     const originalText = btn.textContent;
     try {
-      let userInfo = cachedUserData;
-      if (!userInfo) userInfo = await fetchUserInfo(username);
+      const userInfo = cachedUserData || (await fetchUserInfo(username));
       if (!userInfo) {
         btn.disabled = false;
         return;
       }
       const action = isFollowing ? "unfollow" : "follow";
-      const confirmed = confirm(`Do you want to ${action} @${username}?`);
-      if (!confirmed) {
+      if (!confirm(`Do you want to ${action} @${username}?`)) {
         btn.disabled = false;
         return;
       }
@@ -79,12 +75,11 @@ export function createFollowButton(
         btn.disabled = false;
         return;
       }
-      if (isFollowing) await updateFriendship(userId, false);
-      else await updateFriendship(userId, true);
-
-      const wasFollowing = btn.classList.contains("following");
-      btn.classList.toggle("following", !wasFollowing);
-      btn.textContent = wasFollowing ? "Follow" : "Following";
+      await updateFriendship(userId, !isFollowing);
+      btn.classList.toggle("following");
+      btn.textContent = btn.classList.contains("following")
+        ? "Following"
+        : "Follow";
     } catch (err) {
       alert(
         `Failed to ${isFollowing ? "unfollow" : "follow"} @${username}: ${
@@ -100,179 +95,103 @@ export function createFollowButton(
   return btn;
 }
 
-function createScanButton() {
+function createScanButton(onClick) {
   const btn = document.createElement("button");
   btn.className = "instafn-scan-btn";
   btn.title = "Scan followers/following";
-  btn.innerHTML = `Follow analyzer`;
-  btn.addEventListener("click", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    try {
-      const overlay = await openModal("Follow analysis");
-      const content = overlay.querySelector(".instafn-content");
-      await renderScanButton(content, overlay);
-    } catch (err) {
-      alert("Failed to open modal: " + (err?.message || String(err)));
-    }
-  });
+  btn.textContent = "Follow analyzer";
+  btn.addEventListener("click", onClick);
   return btn;
 }
 
 function placeScanButton() {
   if (window.top !== window.self) return false;
-
-  // Only place button if we can find the archive button - this ensures we're on the user's own profile
   const archiveLink = findArchiveButton();
   const existingBtn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
 
   if (existingBtn) {
-    // If archive link exists, keep the button
-    if (archiveLink) {
-      return true;
-    }
-    // Otherwise remove it
-    existingBtn.closest(".html-div")?.remove();
-    return false;
+    return !!archiveLink;
   }
-
-  // Must have archive button to proceed
   if (!archiveLink) return false;
 
-  // Find the container that holds the archive button
   const archiveWrapper = archiveLink.closest(".html-div");
-  if (!archiveWrapper) return false;
-
+  if (!archiveWrapper?.parentElement) return false;
   const archiveContainer = archiveWrapper.parentElement;
-  if (!archiveContainer) return false;
 
-  // Don't place if already exists in this container
   if (archiveContainer.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) return true;
 
-  // Remove any existing buttons in wrong places
-  const existingWrappers = Array.from(
-    document.querySelectorAll(".html-div")
-  ).filter((wrapper) => wrapper.querySelector(".instafn-scan-btn"));
-  existingWrappers.forEach((wrapper) => wrapper.remove());
-
-  // Always add the class to ensure consistent styling for all buttons
-  archiveContainer.classList.add("instafn-button-container");
-
-  // Create button wrapper with same structure as archive button
-  const btnWrapper = document.createElement("div");
-  btnWrapper.className = archiveWrapper.className; // Use same classes as archive button wrapper
-
-  const btn = createScanButton();
-  btnWrapper.appendChild(btn);
-
-  // Insert right after the archive button's wrapper to keep buttons inline
-  archiveContainer.insertBefore(btnWrapper, archiveWrapper.nextSibling);
-
-  return true;
-}
-
-function ensureFloatingScanFab() {
-  ensureStyles();
-  if (document.querySelector(".instafn-scan-fab")) return;
-
-  const fab = document.createElement("button");
-  fab.className = "instafn-scan-btn instafn-scan-fab";
-  fab.style.position = "fixed";
-  fab.style.bottom = "16px";
-  fab.style.right = "16px";
-  fab.style.zIndex = "100000";
-  fab.style.boxShadow = "0 8px 24px rgba(0,0,0,0.24)";
-  fab.style.padding = "0 16px";
-  fab.style.height = "40px";
-  fab.textContent = "Follow analyzer";
-
-  fab.addEventListener("click", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      const overlay = await openModal("Follow analysis");
-      const content = overlay.querySelector(".instafn-content");
-      await renderScanButton(content, overlay);
-    } catch (err) {
-      alert("Failed to open modal: " + (err?.message || String(err)));
-    }
+  document.querySelectorAll(".html-div").forEach((wrapper) => {
+    if (wrapper.querySelector(".instafn-scan-btn")) wrapper.remove();
   });
 
-  document.body.appendChild(fab);
-}
-
-function clearFloatingScanFab() {
-  document.querySelectorAll(".instafn-scan-fab").forEach((el) => el.remove());
+  archiveContainer.classList.add("instafn-button-container");
+  const btnWrapper = document.createElement("div");
+  btnWrapper.className = archiveWrapper.className;
+  btnWrapper.appendChild(
+    createScanButton(async () => {
+      try {
+        const overlay = await openModal("Follow analysis");
+        await renderScanButton(
+          overlay.querySelector(".instafn-content"),
+          overlay
+        );
+      } catch (err) {
+        alert("Failed to open modal: " + (err?.message || String(err)));
+      }
+    })
+  );
+  archiveContainer.insertBefore(btnWrapper, archiveWrapper.nextSibling);
+  return true;
 }
 
 let scanBtnObserver = null;
 let isInjecting = false;
-let injectedStyleElement = null;
+let retryCount = 0;
+const MAX_RETRIES = 5;
 
 function injectEarlyHideCSS() {
-  // Remove existing style if any
-  if (injectedStyleElement) {
-    injectedStyleElement.remove();
-    injectedStyleElement = null;
-  }
-
-  // Inject CSS early to prevent layout shift
-  // The button will be hidden until we confirm it's the user's own profile
+  if (document.getElementById("instafn-follow-analyzer-early")) return;
   const style = document.createElement("style");
   style.id = "instafn-follow-analyzer-early";
   style.textContent = `
     .instafn-scan-btn:not(.instafn-scan-fab):not(.instafn-visible),
-    .instafn-scan-fab:not(.instafn-visible) {
-      display: none !important;
-    }
+    .instafn-scan-fab:not(.instafn-visible) { display: none !important; }
     .instafn-scan-btn.instafn-visible,
-    .instafn-scan-fab.instafn-visible {
-      display: flex !important;
-    }
+    .instafn-scan-fab.instafn-visible { display: flex !important; }
   `;
-
-  const injectStyle = () => {
-    const target = document.head || document.documentElement || document.body;
-    if (target) {
-      if (!document.getElementById("instafn-follow-analyzer-early")) {
-        target.appendChild(style);
-        injectedStyleElement = style;
-      }
-      return true;
-    }
-    return false;
-  };
-
-  if (!injectStyle()) {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", injectStyle, {
-        once: true,
-      });
-      setTimeout(injectStyle, 0);
-    } else {
-      injectStyle();
-    }
+  const target = document.head || document.documentElement || document.body;
+  if (target) {
+    target.appendChild(style);
+  } else {
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => target?.appendChild(style),
+      { once: true }
+    );
   }
 }
 
 export async function injectScanButton() {
   ensureStyles();
   if (isInjecting) return;
-  if (document.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) return;
-
-  const pathOk = /^\/[A-Za-z0-9._]+\/?$/.test(window.location.pathname);
-  if (!pathOk) {
+  if (!/^\/[A-Za-z0-9._]+\/?$/.test(window.location.pathname)) {
     removeScanButton();
+    retryCount = 0;
+    return;
+  }
+
+  // Check if button already exists
+  if (document.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) {
+    retryCount = 0;
     return;
   }
 
   isInjecting = true;
   try {
-    // Check if it's the user's own profile FIRST before doing anything
     const me = await getMeCached();
     if (!me || !(await isOwnProfile())) {
       removeScanButton();
+      retryCount = 0;
       return;
     }
 
@@ -283,53 +202,54 @@ export async function injectScanButton() {
       document
         .querySelectorAll(".instafn-scan-btn, .instafn-scan-fab")
         .forEach((el) => el.remove());
+      retryCount = 0;
       return;
     }
 
-    if (document.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) {
-      return;
-    }
-
-    const placed = placeScanButton();
-    if (placed) {
-      // Make button visible once placed
-      const btn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
-      if (btn) btn.classList.add("instafn-visible");
-      clearFloatingScanFab();
+    // Try to place the button
+    if (placeScanButton()) {
+      document
+        .querySelector(INLINE_SCAN_BUTTON_SELECTOR)
+        ?.classList.add("instafn-visible");
+      retryCount = 0;
     } else {
-      // If we can't place it, remove any existing buttons
-      removeScanButton();
+      // If placement failed, retry with exponential backoff
+      if (retryCount < MAX_RETRIES) {
+        retryCount++;
+        console.log(
+          `[Instafn Follow Analyzer] Archive button not found, retrying... (${retryCount}/${MAX_RETRIES})`
+        );
+        setTimeout(injectScanButton, 500);
+        return;
+      } else {
+        console.warn(
+          "[Instafn Follow Analyzer] Max retries reached, giving up on button injection"
+        );
+        retryCount = 0;
+        removeScanButton();
+      }
     }
 
-    // Set up observer to re-check placement when DOM changes
+    // Set up observer if not already set up
     if (!scanBtnObserver) {
       scanBtnObserver = new MutationObserver(async () => {
-        // Always check if it's still the user's own profile first
         const me = await getMeCached();
         if (!me || !(await isOwnProfile())) {
           removeScanButton();
           return;
         }
-
-        // Check if archive button exists (required for placement)
-        const archiveLink = findArchiveButton();
-        if (!archiveLink) {
-          removeScanButton();
-          return;
-        }
-
-        // Only try to place if button doesn't exist
-        const hasInline = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
-        if (!hasInline) {
-          const ok = placeScanButton();
-          if (ok) {
-            const btn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
-            if (btn) btn.classList.add("instafn-visible");
-            clearFloatingScanFab();
+        // Check if button doesn't exist and we're on own profile
+        if (!document.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) {
+          if (findArchiveButton()) {
+            // Archive button exists but our button doesn't - inject it
+            placeScanButton();
+            document
+              .querySelector(INLINE_SCAN_BUTTON_SELECTOR)
+              ?.classList.add("instafn-visible");
           }
         }
       });
-      scanBtnObserver.observe(document.body, {
+      scanBtnObserver.observe(document.body || document.documentElement, {
         childList: true,
         subtree: true,
       });
@@ -343,14 +263,12 @@ export function removeScanButton() {
   document
     .querySelectorAll(".instafn-scan-btn, .instafn-scan-fab")
     .forEach((el) => el.remove());
-
   if (scanBtnObserver) {
     scanBtnObserver.disconnect();
     scanBtnObserver = null;
   }
 }
 
-// Export early initialization function
 export function initFollowAnalyzerEarly() {
   injectEarlyHideCSS();
 }
@@ -360,8 +278,8 @@ export async function openModal(titleText) {
   const overlay = await createModal(titleText || "Follow analyzer", {
     showTabs: true,
   });
-  const content = overlay.querySelector(".instafn-content");
-  content.innerHTML = '<div class="instafn-empty">Preparing analysis...</div>';
+  overlay.querySelector(".instafn-content").innerHTML =
+    '<div class="instafn-empty">Preparing analysis...</div>';
   return overlay;
 }
 
@@ -372,22 +290,16 @@ export function confirmWithModal({
   cancelText = "Cancel",
 } = {}) {
   ensureStyles();
-  return confirmModal({
-    title,
-    message,
-    confirmText,
-    cancelText,
-  });
+  return confirmModal({ title, message, confirmText, cancelText });
 }
 
 export async function renderScanButton(content, overlay) {
   ensureStyles();
   const prevData = await loadPreviousSnapshot();
   const hasPreviousScan =
-    prevData.current &&
-    prevData.current.username &&
-    prevData.current.followers &&
-    prevData.current.following;
+    prevData.current?.username &&
+    prevData.current?.followers &&
+    prevData.current?.following;
 
   content.innerHTML = `
     <div style="text-align: center; padding: 40px 20px; padding-top: 30px">
@@ -453,8 +365,7 @@ export async function renderScanButton(content, overlay) {
 
   scanBtn.addEventListener("click", async () => {
     try {
-      const titleEl = overlay.querySelector(".instafn-modal-title");
-      titleEl.textContent = "Scanning...";
+      overlay.querySelector(".instafn-modal-title").textContent = "Scanning...";
       content.innerHTML = `
         <div class="instafn-loading-container">
           <div class="instafn-loading-spinner">
@@ -480,15 +391,17 @@ export async function renderScanButton(content, overlay) {
       await renderAnalysisInto(content, data);
     } catch (err) {
       const isRateLimited = /429|Rate limited/i.test(err?.message || "");
-      const title = isRateLimited ? "Rate Limited" : "Scan Failed";
-      const message = isRateLimited
-        ? "Instagram is rate limiting requests right now. Please try again in 15–60 minutes and avoid running scans repeatedly."
-        : err.message;
       content.innerHTML = `
         <div style="text-align: center; padding: 40px 20px;">
           <div class="instafn-error-icon">⚠️</div>
-          <h3 class="instafn-error-title">${title}</h3>
-          <p class="instafn-error-message">${message}</p>
+          <h3 class="instafn-error-title">${
+            isRateLimited ? "Rate Limited" : "Scan Failed"
+          }</h3>
+          <p class="instafn-error-message">${
+            isRateLimited
+              ? "Instagram is rate limiting requests right now. Please try again in 15–60 minutes and avoid running scans repeatedly."
+              : err.message
+          }</p>
           ${
             isRateLimited
               ? '<div class="instafn-error-hint">Tips: keep one Instagram tab open, disable ad blockers for instagram.com, and wait before retrying.</div>'
@@ -499,6 +412,141 @@ export async function renderScanButton(content, overlay) {
       `;
     }
   });
+}
+
+async function getUserInfo(
+  username,
+  data,
+  currentFollowerSet,
+  currentFollowingSet,
+  prevFollowerSet,
+  prevFollowingSet
+) {
+  let cachedData =
+    getProfilePicData(username, data.cachedSnapshot) ||
+    getProfilePicData(username, data.previousSnapshot);
+  if (!cachedData) {
+    cachedData =
+      data.followers?.find((u) => u.username === username) ||
+      data.following?.find((u) => u.username === username);
+  }
+
+  let info =
+    cachedData &&
+    (cachedData.profilePicBase64 ||
+      cachedData.profilePicUrl ||
+      cachedData.profilePic ||
+      cachedData.isDeactivated !== undefined)
+      ? {
+          username: cachedData.username,
+          fullName: cachedData.fullName || username,
+          profilePic:
+            cachedData.profilePicBase64 ||
+            cachedData.profilePic ||
+            cachedData.profilePicUrl ||
+            null,
+          isPrivate: cachedData.isPrivate || false,
+          isVerified: cachedData.isVerified || false,
+          isFollowed: !!cachedData.isFollowed,
+          isFollowing: !!cachedData.isFollowing,
+          id: cachedData.id,
+          isDeactivated: !!cachedData.isDeactivated,
+        }
+      : null;
+
+  const shouldProbe = !info || (!info.profilePic && !info.isDeactivated);
+  if (shouldProbe) {
+    try {
+      const fetched = await fetchUserInfo(username);
+      if (fetched) {
+        info = {
+          username: fetched.username,
+          fullName: fetched.fullName || username,
+          profilePic: fetched.profilePic || info?.profilePic || null,
+          isPrivate: fetched.isPrivate ?? info?.isPrivate ?? false,
+          isVerified: fetched.isVerified ?? info?.isVerified ?? false,
+          isFollowed:
+            fetched.isFollowed ??
+            info?.isFollowed ??
+            currentFollowerSet.has(username),
+          isFollowing:
+            fetched.isFollowing ??
+            info?.isFollowing ??
+            currentFollowingSet.has(username),
+          id: fetched.id || info?.id || null,
+          isDeactivated: !!fetched.isDeactivated,
+        };
+      }
+    } catch (_) {}
+  }
+
+  if (!info) {
+    info = {
+      username,
+      fullName: username,
+      profilePic: null,
+      isPrivate: false,
+      isVerified: false,
+      isFollowed:
+        currentFollowerSet.has(username) || prevFollowerSet.has(username),
+      isFollowing:
+        currentFollowingSet.has(username) || prevFollowingSet.has(username),
+      id: null,
+      isDeactivated: false,
+    };
+  }
+
+  info.isFollowed =
+    info.isFollowed ||
+    currentFollowerSet.has(username) ||
+    prevFollowerSet.has(username) ||
+    false;
+  info.isFollowing =
+    info.isFollowing ||
+    currentFollowingSet.has(username) ||
+    prevFollowingSet.has(username) ||
+    false;
+  return info;
+}
+
+function createUserItem(username, info, itemIsFollowing) {
+  const item = document.createElement("div");
+  item.className = "instafn-item";
+  const itemLeft = document.createElement("div");
+  itemLeft.className = "instafn-item-left";
+  const img = document.createElement("img");
+  img.alt = "";
+  img.loading = "lazy";
+  img.src =
+    info?.profilePic ||
+    "data:image/jpeg;base64,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";
+  const itemInfo = document.createElement("div");
+  itemInfo.className = "instafn-item-info";
+  const usernameEl = document.createElement("div");
+  usernameEl.className = "instafn-item-username";
+  const usernameLink = document.createElement("a");
+  usernameLink.href = `https://www.instagram.com/${username}/`;
+  usernameLink.target = "_blank";
+  usernameLink.rel = "noopener noreferrer";
+  usernameLink.textContent = username;
+  usernameEl.appendChild(usernameLink);
+  if (info.isDeactivated) {
+    const deactivatedTag = document.createElement("span");
+    deactivatedTag.className = "instafn-deactivated-tag";
+    deactivatedTag.title = "This account appears deactivated/unavailable.";
+    deactivatedTag.textContent = "⚠️";
+    usernameEl.appendChild(deactivatedTag);
+  }
+  const nameEl = document.createElement("div");
+  nameEl.className = "instafn-item-name";
+  nameEl.textContent = info?.fullName || "";
+  itemInfo.appendChild(usernameEl);
+  itemInfo.appendChild(nameEl);
+  itemLeft.appendChild(img);
+  itemLeft.appendChild(itemInfo);
+  item.appendChild(itemLeft);
+  item.appendChild(createFollowButton(username, itemIsFollowing, info));
+  return item;
 }
 
 export async function renderAnalysisInto(container, data) {
@@ -513,13 +561,37 @@ export async function renderAnalysisInto(container, data) {
   );
 
   const tabDefs = [
-    { key: "dontFollowYouBack", label: "Don't follow you back" },
-    { key: "youDontFollowBack", label: "You don't follow back" },
-    { key: "lostFollowers", label: "Since last: Unfollowed you" },
-    { key: "newFollowers", label: "Since last: Followed you" },
-    { key: "peopleYouFollowed", label: "Since last: You followed" },
-    { key: "peopleYouUnfollowed", label: "Since last: You unfollowed" },
-    { key: "mutuals", label: "Mutual followers" },
+    {
+      key: "dontFollowYouBack",
+      label: "Don't follow you back",
+      isFollowing: true,
+    },
+    {
+      key: "youDontFollowBack",
+      label: "You don't follow back",
+      isFollowing: false,
+    },
+    {
+      key: "lostFollowers",
+      label: "Since last: Unfollowed you",
+      isFollowing: false,
+    },
+    {
+      key: "newFollowers",
+      label: "Since last: Followed you",
+      isFollowing: false,
+    },
+    {
+      key: "peopleYouFollowed",
+      label: "Since last: You followed",
+      isFollowing: true,
+    },
+    {
+      key: "peopleYouUnfollowed",
+      label: "Since last: You unfollowed",
+      isFollowing: false,
+    },
+    { key: "mutuals", label: "Mutual followers", isFollowing: true },
   ];
 
   const modal = container.closest(".instafn-modal");
@@ -528,9 +600,9 @@ export async function renderAnalysisInto(container, data) {
   const views = new Map();
 
   for (const def of tabDefs) {
+    const items = data[def.key] || [];
     const btn = document.createElement("button");
     btn.className = "instafn-tab";
-    const items = data[def.key] || [];
     btn.textContent = `${def.label} (${items.length})`;
     tabsBar.appendChild(btn);
 
@@ -542,163 +614,20 @@ export async function renderAnalysisInto(container, data) {
       const list = document.createElement("div");
       list.className = "instafn-list";
       const userInfos = await Promise.all(
-        items.map(async (username) => {
-          const currentIsFollowing = currentFollowingSet.has(username);
-          const currentIsFollowed = currentFollowerSet.has(username);
-          const prevIsFollowing = prevFollowingSet.has(username);
-          const prevIsFollowed = prevFollowerSet.has(username);
-
-          let cachedData =
-            getProfilePicData(username, data.cachedSnapshot) ||
-            getProfilePicData(username, data.previousSnapshot);
-
-          if (!cachedData) {
-            const follower = data.followers?.find(
-              (u) => u.username === username
-            );
-            const following = data.following?.find(
-              (u) => u.username === username
-            );
-            cachedData = follower || following;
-          }
-
-          let info =
-            cachedData &&
-            (cachedData.profilePicBase64 ||
-              cachedData.profilePicUrl ||
-              cachedData.profilePic ||
-              cachedData.isDeactivated !== undefined)
-              ? {
-                  username: cachedData.username,
-                  fullName: cachedData.fullName || username,
-                  profilePic:
-                    cachedData.profilePicBase64 ||
-                    cachedData.profilePic ||
-                    cachedData.profilePicUrl ||
-                    null,
-                  isPrivate: cachedData.isPrivate || false,
-                  isVerified: cachedData.isVerified || false,
-                  isFollowed: !!cachedData.isFollowed,
-                  isFollowing: !!cachedData.isFollowing,
-                  id: cachedData.id,
-                  isDeactivated: !!cachedData.isDeactivated,
-                }
-              : null;
-
-          const shouldProbe =
-            !info ||
-            (!info.profilePic && !info.isDeactivated) ||
-            def.key === "lostFollowers" ||
-            def.key === "peopleYouUnfollowed";
-
-          if (shouldProbe) {
-            try {
-              const fetched = await fetchUserInfo(username);
-              if (fetched) {
-                info = {
-                  username: fetched.username,
-                  fullName: fetched.fullName || username,
-                  profilePic: fetched.profilePic || info?.profilePic || null,
-                  isPrivate: fetched.isPrivate ?? info?.isPrivate ?? false,
-                  isVerified: fetched.isVerified ?? info?.isVerified ?? false,
-                  isFollowed:
-                    fetched.isFollowed ?? info?.isFollowed ?? currentIsFollowed,
-                  isFollowing:
-                    fetched.isFollowing ??
-                    info?.isFollowing ??
-                    currentIsFollowing,
-                  id: fetched.id || info?.id || null,
-                  isDeactivated: !!fetched.isDeactivated,
-                };
-              }
-            } catch (_) {
-              // ignore fetch errors; fall back to available info
-            }
-          }
-
-          if (!info) {
-            info = {
-              username,
-              fullName: username,
-              profilePic: null,
-              isPrivate: false,
-              isVerified: false,
-              isFollowed: currentIsFollowed || prevIsFollowed,
-              isFollowing: currentIsFollowing || prevIsFollowing,
-              id: null,
-              isDeactivated: false,
-            };
-          }
-
-          // Ensure relationship flags reflect current known sets
-          info.isFollowed =
-            info.isFollowed || currentIsFollowed || prevIsFollowed || false;
-          info.isFollowing =
-            info.isFollowing || currentIsFollowing || prevIsFollowing || false;
-
-          return { username, info };
-        })
+        items.map((username) =>
+          getUserInfo(
+            username,
+            data,
+            currentFollowerSet,
+            currentFollowingSet,
+            prevFollowerSet,
+            prevFollowingSet
+          )
+        )
       );
-
-      for (const { username, info } of userInfos) {
-        const item = document.createElement("div");
-        item.className = "instafn-item";
-        const itemLeft = document.createElement("div");
-        itemLeft.className = "instafn-item-left";
-        const img = document.createElement("img");
-        img.alt = "";
-        img.loading = "lazy";
-        if (info?.profilePic) {
-          img.src = info.profilePic;
-        } else {
-          img.src =
-            "data:image/jpeg;base64,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";
-        }
-        const itemInfo = document.createElement("div");
-        itemInfo.className = "instafn-item-info";
-        const usernameEl = document.createElement("div");
-        usernameEl.className = "instafn-item-username";
-        const usernameLink = document.createElement("a");
-        usernameLink.href = `https://www.instagram.com/${username}/`;
-        usernameLink.target = "_blank";
-        usernameLink.rel = "noopener noreferrer";
-        usernameLink.textContent = username;
-        usernameEl.appendChild(usernameLink);
-        if (info.isDeactivated) {
-          const deactivatedTag = document.createElement("span");
-          deactivatedTag.className = "instafn-deactivated-tag";
-          deactivatedTag.title =
-            "This account appears deactivated/unavailable.";
-          deactivatedTag.textContent = "⚠️";
-          usernameEl.appendChild(deactivatedTag);
-        }
-        const nameEl = document.createElement("div");
-        nameEl.className = "instafn-item-name";
-        nameEl.textContent = info?.fullName || "";
-        itemInfo.appendChild(usernameEl);
-        itemInfo.appendChild(nameEl);
-        itemLeft.appendChild(img);
-        itemLeft.appendChild(itemInfo);
-
-        const itemIsFollowing = (() => {
-          switch (def.key) {
-            case "dontFollowYouBack":
-            case "mutuals":
-            case "peopleYouFollowed":
-              return true;
-            case "youDontFollowBack":
-            case "peopleYouUnfollowed":
-            case "lostFollowers":
-              return false;
-            default:
-              return !!info?.isFollowing;
-          }
-        })();
-        const followBtn = createFollowButton(username, itemIsFollowing, info);
-        item.appendChild(itemLeft);
-        item.appendChild(followBtn);
-        list.appendChild(item);
-      }
+      userInfos.forEach((info, i) => {
+        list.appendChild(createUserItem(items[i], info, def.isFollowing));
+      });
       view.appendChild(list);
     }
     views.set(btn, view);
@@ -711,8 +640,8 @@ export async function renderAnalysisInto(container, data) {
     }
     const tabsBar = btn.closest(".instafn-tabs");
     if (tabsBar) {
-      const tabsBarRect = tabsBar.getBoundingClientRect();
       const btnRect = btn.getBoundingClientRect();
+      const tabsBarRect = tabsBar.getBoundingClientRect();
       if (
         btnRect.left < tabsBarRect.left ||
         btnRect.right > tabsBarRect.right

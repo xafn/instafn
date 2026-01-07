@@ -36,7 +36,7 @@
       console.log('[Instafn graphql-sniffer] GraphQL fetch request:', url, 'Body preview:', bodyStr.substring(0, 200));
       
       if (isProfileRequest) {
-        console.log('[Instafn graphql-sniffer] ✅ Intercepted profile GraphQL request (fetch):', url);
+        console.log('[Instafn graphql-sniffer]  Intercepted profile GraphQL request (fetch):', url);
         try {
           const response = await originalFetch.apply(this, args);
           const clonedResponse = response.clone();
@@ -120,7 +120,7 @@
     
       // Only log profile requests to reduce spam
       if (isProfileRequest) {
-        console.log('[Instafn graphql-sniffer] ✅ Intercepted profile GraphQL request:', url);
+        console.log('[Instafn graphql-sniffer]  Intercepted profile GraphQL request:', url);
       }
     
     if (isInboxRequest || isProfileRequest) {

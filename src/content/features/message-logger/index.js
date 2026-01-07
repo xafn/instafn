@@ -273,7 +273,7 @@ function processMessage(parsedData, url) {
                           JSON.stringify(Array.from(threadNameMap.entries()))
                         );
                         console.log(
-                          `[Instafn Message Logger] 📝 Stored thread name from DOM: "${threadNameText}" for thread_fbid: ${messageThreadFbid} (matches deletion deltas!)`
+                          `[Instafn Message Logger]  Stored thread name from DOM: "${threadNameText}" for thread_fbid: ${messageThreadFbid} (matches deletion deltas!)`
                         );
                         break;
                       }
@@ -292,7 +292,7 @@ function processMessage(parsedData, url) {
                     JSON.stringify(Array.from(threadNameMap.entries()))
                   );
                   console.log(
-                    `[Instafn Message Logger] 📝 Ensured thread name "${existingName}" is stored with thread_fbid: ${messageThreadFbid}`
+                    `[Instafn Message Logger]  Ensured thread name "${existingName}" is stored with thread_fbid: ${messageThreadFbid}`
                   );
                 }
               }
@@ -384,10 +384,10 @@ function processMessage(parsedData, url) {
                 deletedMessage.thread;
 
               console.log(
-                `[Instafn Message Logger] 🔍 Looking up thread name for threadId: ${threadId}, threadFbid from delta: ${threadFbid}`
+                `[Instafn Message Logger]  Looking up thread name for threadId: ${threadId}, threadFbid from delta: ${threadFbid}`
               );
               console.log(
-                `[Instafn Message Logger] 🔍 Thread name map size: ${
+                `[Instafn Message Logger]  Thread name map size: ${
                   threadNameMap.size
                 }, sample keys: ${Array.from(threadNameMap.keys())
                   .slice(0, 10)
@@ -419,7 +419,7 @@ function processMessage(parsedData, url) {
                   // If it's an empty string, it's a group chat without a name - use thread ID
                   threadName = foundName || String(threadId);
                   console.log(
-                    `[Instafn Message Logger] ✅ Found thread name entry: "${foundName}" (displaying: "${threadName}") using key: ${foundKey}`
+                    `[Instafn Message Logger]  Found thread name entry: "${foundName}" (displaying: "${threadName}") using key: ${foundKey}`
                   );
                 } else {
                   // Try with the thread_fbid from the stored message
@@ -441,7 +441,7 @@ function processMessage(parsedData, url) {
                         JSON.stringify(Array.from(threadNameMap.entries()))
                       );
                       console.log(
-                        `[Instafn Message Logger] ✅ Found thread name: "${threadName}" using messageThreadFbid: ${messageThreadFbid}`
+                        `[Instafn Message Logger]  Found thread name: "${threadName}" using messageThreadFbid: ${messageThreadFbid}`
                       );
                     }
                   }
@@ -488,7 +488,7 @@ function processMessage(parsedData, url) {
                               )
                             );
                             console.log(
-                              `[Instafn Message Logger] ✅ Found thread name from DOM: "${threadName}"`
+                              `[Instafn Message Logger]  Found thread name from DOM: "${threadName}"`
                             );
                             break;
                           }
@@ -496,7 +496,7 @@ function processMessage(parsedData, url) {
                       }
                     } catch (e) {
                       console.log(
-                        `[Instafn Message Logger] ⚠️ Error getting thread name from DOM:`,
+                        `[Instafn Message Logger]  Error getting thread name from DOM:`,
                         e
                       );
                     }
@@ -543,16 +543,16 @@ function processMessage(parsedData, url) {
               saveDeletedMessages();
 
               if (deletedMessage.text) {
-                console.log(`🗑️ Message deleted: "${deletedMessage.text}"`);
+                console.log(` Message deleted: "${deletedMessage.text}"`);
               } else {
-                console.log(`🗑️ Message deleted (ID: ${messageId})`);
+                console.log(` Message deleted (ID: ${messageId})`);
               }
 
               // Remove from active message store
               messageStore.delete(messageId);
             } else {
               console.log(
-                `🗑️ Message deleted (ID: ${messageId}) - message not found in store`
+                ` Message deleted (ID: ${messageId}) - message not found in store`
               );
             }
           }
@@ -701,7 +701,7 @@ function hookWebSocket() {
     // Only hook into Instagram chat WebSocket
     if (url && url.includes("edge-chat.instagram.com")) {
       console.log(
-        "[Instafn Message Logger] ✅ Instagram chat WebSocket detected:",
+        "[Instafn Message Logger]  Instagram chat WebSocket detected:",
         url
       );
 
@@ -758,7 +758,7 @@ function hookWebSocket() {
       if (!hookedWebSockets.has(this)) {
         hookedWebSockets.add(this);
         console.log(
-          "[Instafn Message Logger] ✅ Prototype-level hook: Instagram chat WebSocket detected:",
+          "[Instafn Message Logger]  Prototype-level hook: Instagram chat WebSocket detected:",
           url
         );
         console.log(
@@ -822,7 +822,7 @@ function hookWebSocket() {
         ) {
           hookedWebSockets.add(this);
           console.log(
-            "[Instafn Message Logger] ✅ Prototype-level onmessage hook: Instagram chat WebSocket detected:",
+            "[Instafn Message Logger]  Prototype-level onmessage hook: Instagram chat WebSocket detected:",
             url
           );
 
@@ -868,7 +868,7 @@ function findAndHookExistingWebSockets() {
         );
         if (url.includes("edge-chat.instagram.com")) {
           console.log(
-            "[Instafn Message Logger] ✅ Found Instagram chat WebSocket! Hooking..."
+            "[Instafn Message Logger]  Found Instagram chat WebSocket! Hooking..."
           );
           hookWebSocketInstance(value, url);
           foundCount++;
@@ -971,7 +971,7 @@ function processGraphQLMessages(data) {
   let storedCount = 0;
 
   try {
-    console.log("[Instafn Message Logger] 🔍 Processing GraphQL data...");
+    console.log("[Instafn Message Logger]  Processing GraphQL data...");
     console.log("[Instafn Message Logger] 📦 Data structure:", {
       hasData: !!data?.data,
       hasGetSlideMailbox: !!data?.data?.get_slide_mailbox_for_iris_subscription,
@@ -979,7 +979,7 @@ function processGraphQLMessages(data) {
 
     const mailbox = data?.data?.get_slide_mailbox_for_iris_subscription;
     if (!mailbox) {
-      console.log("[Instafn Message Logger] ⚠️ No mailbox found in data");
+      console.log("[Instafn Message Logger]  No mailbox found in data");
       return 0;
     }
 
@@ -990,7 +990,7 @@ function processGraphQLMessages(data) {
       const thread = threadEdge?.node?.as_ig_direct_thread;
       if (!thread) {
         console.log(
-          `[Instafn Message Logger] ⚠️ Thread ${threadIdx} has no as_ig_direct_thread`
+          `[Instafn Message Logger]  Thread ${threadIdx} has no as_ig_direct_thread`
         );
         return;
       }
@@ -1003,7 +1003,7 @@ function processGraphQLMessages(data) {
           if (fbid && username) {
             senderUsernameMap.set(String(fbid), username);
             console.log(
-              `[Instafn Message Logger] 📝 Mapped sender ${fbid} → ${username}`
+              `[Instafn Message Logger]  Mapped sender ${fbid} → ${username}`
             );
           }
         });
@@ -1018,7 +1018,7 @@ function processGraphQLMessages(data) {
           currentUserFbid = String(viewerFbid);
           localStorage.setItem(STORAGE_KEY_CURRENT_USER_FBID, currentUserFbid);
           console.log(
-            `[Instafn Message Logger] 📝 Stored current user FBID: ${currentUserFbid}`
+            `[Instafn Message Logger]  Stored current user FBID: ${currentUserFbid}`
           );
         }
       }
@@ -1046,13 +1046,13 @@ function processGraphQLMessages(data) {
         if (threadId) {
           threadNameMap.set(String(threadId), threadName);
           console.log(
-            `[Instafn Message Logger] 📝 Mapped thread ID ${threadId} → "${threadName}"`
+            `[Instafn Message Logger]  Mapped thread ID ${threadId} → "${threadName}"`
           );
         }
         if (threadKey && String(threadKey) !== String(threadId)) {
           threadNameMap.set(String(threadKey), threadName);
           console.log(
-            `[Instafn Message Logger] 📝 Mapped thread key ${threadKey} → "${threadName}"`
+            `[Instafn Message Logger]  Mapped thread key ${threadKey} → "${threadName}"`
           );
         }
         // Save immediately to localStorage
@@ -1072,13 +1072,13 @@ function processGraphQLMessages(data) {
         if (threadId) {
           threadNameMap.set(String(threadId), "");
           console.log(
-            `[Instafn Message Logger] 📝 Marked thread ID ${threadId} as group chat (no name)`
+            `[Instafn Message Logger]  Marked thread ID ${threadId} as group chat (no name)`
           );
         }
         if (threadKey && String(threadKey) !== String(threadId)) {
           threadNameMap.set(String(threadKey), "");
           console.log(
-            `[Instafn Message Logger] 📝 Marked thread key ${threadKey} as group chat (no name)`
+            `[Instafn Message Logger]  Marked thread key ${threadKey} as group chat (no name)`
           );
         }
         // Save immediately to localStorage
@@ -1105,14 +1105,14 @@ function processGraphQLMessages(data) {
         const message = messageEdge?.node;
         if (!message) {
           console.log(
-            `[Instafn Message Logger] ⚠️ Message ${msgIdx} in thread ${threadIdx} has no node`
+            `[Instafn Message Logger]  Message ${msgIdx} in thread ${threadIdx} has no node`
           );
           return;
         }
 
         if (message.__typename !== "SlideMessage") {
           console.log(
-            `[Instafn Message Logger] ⚠️ Message ${msgIdx} type is ${message.__typename}, not SlideMessage`
+            `[Instafn Message Logger]  Message ${msgIdx} type is ${message.__typename}, not SlideMessage`
           );
           return;
         }
@@ -1120,7 +1120,7 @@ function processGraphQLMessages(data) {
         const messageId = message.id;
         if (!messageId) {
           console.log(
-            `[Instafn Message Logger] ⚠️ Message ${msgIdx} has no ID`
+            `[Instafn Message Logger]  Message ${msgIdx} has no ID`
           );
           return;
         }
@@ -1144,7 +1144,7 @@ function processGraphQLMessages(data) {
             threadNameMap.set(String(threadKey), threadName);
             savedThreadName = true;
             console.log(
-              `[Instafn Message Logger] 📝 Mapped thread key ${threadKey} → "${threadName}"`
+              `[Instafn Message Logger]  Mapped thread key ${threadKey} → "${threadName}"`
             );
           }
           // Store with message's thread_fbid
@@ -1155,7 +1155,7 @@ function processGraphQLMessages(data) {
             threadNameMap.set(String(messageThreadFbid), threadName);
             savedThreadName = true;
             console.log(
-              `[Instafn Message Logger] 📝 Mapped message thread_fbid ${messageThreadFbid} → "${threadName}"`
+              `[Instafn Message Logger]  Mapped message thread_fbid ${messageThreadFbid} → "${threadName}"`
             );
           }
           // Also store with thread ID if different
@@ -1167,7 +1167,7 @@ function processGraphQLMessages(data) {
             threadNameMap.set(String(threadId), threadName);
             savedThreadName = true;
             console.log(
-              `[Instafn Message Logger] 📝 Also mapped thread ID ${threadId} → "${threadName}"`
+              `[Instafn Message Logger]  Also mapped thread ID ${threadId} → "${threadName}"`
             );
           }
           // Store with message.thread_id if it exists and is different
@@ -1180,7 +1180,7 @@ function processGraphQLMessages(data) {
             threadNameMap.set(String(message.thread_id), threadName);
             savedThreadName = true;
             console.log(
-              `[Instafn Message Logger] 📝 Also mapped message.thread_id ${message.thread_id} → "${threadName}"`
+              `[Instafn Message Logger]  Also mapped message.thread_id ${message.thread_id} → "${threadName}"`
             );
           }
           // Store with message.thread_fbid if it exists and is different
@@ -1194,7 +1194,7 @@ function processGraphQLMessages(data) {
             threadNameMap.set(String(message.thread_fbid), threadName);
             savedThreadName = true;
             console.log(
-              `[Instafn Message Logger] 📝 Also mapped message.thread_fbid ${message.thread_fbid} → "${threadName}"`
+              `[Instafn Message Logger]  Also mapped message.thread_fbid ${message.thread_fbid} → "${threadName}"`
             );
           }
         } else if (isGroupChat) {
@@ -1203,7 +1203,7 @@ function processGraphQLMessages(data) {
             threadNameMap.set(String(threadKey), "");
             savedThreadName = true;
             console.log(
-              `[Instafn Message Logger] 📝 Marked thread key ${threadKey} as group chat (no name)`
+              `[Instafn Message Logger]  Marked thread key ${threadKey} as group chat (no name)`
             );
           }
           if (
@@ -1213,7 +1213,7 @@ function processGraphQLMessages(data) {
             threadNameMap.set(String(messageThreadFbid), "");
             savedThreadName = true;
             console.log(
-              `[Instafn Message Logger] 📝 Marked message thread_fbid ${messageThreadFbid} as group chat (no name)`
+              `[Instafn Message Logger]  Marked message thread_fbid ${messageThreadFbid} as group chat (no name)`
             );
           }
           if (
@@ -1257,7 +1257,7 @@ function processGraphQLMessages(data) {
           text.includes("missed a video chat")
         ) {
           console.log(
-            `[Instafn Message Logger] ⏭️ Skipping non-text message: "${originalText}"`
+            `[Instafn Message Logger]  Skipping non-text message: "${originalText}"`
           );
           return;
         }
@@ -1288,7 +1288,7 @@ function processGraphQLMessages(data) {
           );
         } else {
           console.log(
-            `[Instafn Message Logger] ⏭️ Message [${messageId}] already exists in store`
+            `[Instafn Message Logger]  Message [${messageId}] already exists in store`
           );
         }
       });
@@ -1306,12 +1306,12 @@ function processGraphQLMessages(data) {
     });
 
     console.log(
-      `[Instafn Message Logger] ✅ Processed GraphQL messages. Total stored: ${storedCount}, Store size: ${messageStore.size}`
+      `[Instafn Message Logger]  Processed GraphQL messages. Total stored: ${storedCount}, Store size: ${messageStore.size}`
     );
     return storedCount;
   } catch (error) {
     console.error(
-      "[Instafn Message Logger] ❌ Error processing GraphQL messages:",
+      "[Instafn Message Logger]  Error processing GraphQL messages:",
       error
     );
     return storedCount;
@@ -1405,7 +1405,7 @@ function setupPostMessageListener() {
         const extracted = extractJSONFromJS(responseText);
         if (extracted) {
           console.log(
-            "[Instafn Message Logger] ✅ Extracted JSON from GraphQL response"
+            "[Instafn Message Logger]  Extracted JSON from GraphQL response"
           );
           const messageCount = processGraphQLMessages(extracted);
           console.log(
@@ -1415,7 +1415,7 @@ function setupPostMessageListener() {
           try {
             const data = JSON.parse(responseText);
             console.log(
-              "[Instafn Message Logger] ✅ Parsed GraphQL response as JSON"
+              "[Instafn Message Logger]  Parsed GraphQL response as JSON"
             );
             const messageCount = processGraphQLMessages(data);
             console.log(
@@ -1423,7 +1423,7 @@ function setupPostMessageListener() {
             );
           } catch (e) {
             console.log(
-              "[Instafn Message Logger] ❌ Failed to parse GraphQL response:",
+              "[Instafn Message Logger]  Failed to parse GraphQL response:",
               e.message
             );
           }
@@ -1551,13 +1551,13 @@ function loadThreadNameMap() {
       );
     } else {
       console.log(
-        `[Instafn Message Logger] ℹ️ No thread name mappings found in storage. Thread names will be rebuilt automatically when you load DMs or receive messages.`
+        `[Instafn Message Logger]  No thread name mappings found in storage. Thread names will be rebuilt automatically when you load DMs or receive messages.`
       );
     }
   } catch (e) {
     console.error("[Instafn Message Logger] Error loading thread name map:", e);
     console.log(
-      `[Instafn Message Logger] ℹ️ Thread names will be rebuilt automatically when you load DMs or receive messages.`
+      `[Instafn Message Logger]  Thread names will be rebuilt automatically when you load DMs or receive messages.`
     );
   }
 }
