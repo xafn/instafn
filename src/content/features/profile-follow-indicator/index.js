@@ -191,7 +191,7 @@ export function setupGraphQLMessageListenerEarly() {
   messageListenerSetup = true;
   // Only set up the listener if the feature is enabled
   chrome.storage.sync.get(
-    { enableProfileFollowIndicator: true },
+    { enableProfileFollowIndicator: false },
     (settings) => {
       if (settings.enableProfileFollowIndicator) {
         isEnabled = true;
@@ -265,27 +265,3 @@ export function initProfileFollowIndicator() {
   });
 }
 
-export function disableProfileFollowIndicator() {
-  isEnabled = false;
-
-  const existing = document.getElementById(INDICATOR_ID);
-  if (existing) existing.remove();
-
-  if (urlObserver) {
-    urlObserver.disconnect();
-    urlObserver = null;
-  }
-  if (domObserver) {
-    domObserver.disconnect();
-    domObserver = null;
-  }
-
-  // Remove message listener when disabled
-  if (messageListenerHandler) {
-    window.removeEventListener("message", messageListenerHandler);
-    messageListenerHandler = null;
-  }
-
-  currentUsername = null;
-  retryCount = 0;
-}

@@ -12,6 +12,7 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    gap: 6px !important;
     line-height: var(--system-14-line-height) !important;
     height: 44px !important;
     border-radius: 12px !important;

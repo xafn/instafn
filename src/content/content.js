@@ -21,6 +21,8 @@ import {
   renderScanButton,
   confirmWithModal,
   initFollowAnalyzerEarly,
+  setupScanButtonObserver,
+  setScanButtonEnabled,
 } from "./features/follow-analyzer/index.js";
 import { isOwnProfile, getMeCached } from "./features/follow-analyzer/logic.js";
 import { injectScript } from "./utils/scriptInjector.js";
@@ -47,14 +49,10 @@ import { setupMessageViewer } from "./features/message-logger/message-viewer.js"
 import { initTypingReceiptBlocker } from "./features/typing-receipt-blocker/index.js";
 import {
   initProfileFollowIndicator,
-  disableProfileFollowIndicator,
   setupGraphQLMessageListenerEarly,
 } from "./features/profile-follow-indicator/index.js";
 import { initCallTimer } from "./features/call-timer/index.js";
-import {
-  initProfileComments,
-  disableProfileComments,
-} from "./features/profile-comments/index.js";
+import { initProfileComments } from "./features/profile-comments/index.js";
 
 // Initialize user info cache
 window.userInfoCache = new Map();
@@ -80,21 +78,21 @@ document.addEventListener("DOMContentLoaded", () => {
   // Load user settings
   chrome.storage.sync.get(
     {
-      blockStorySeen: true,
-      confirmLikes: true,
-      confirmComments: true,
-      confirmCalls: true,
-      confirmFollow: true,
-      confirmReposts: true,
-      confirmStoryQuickReactions: true,
-      confirmStoryReplies: true,
-      activateFollowAnalyzer: true,
+      blockStorySeen: false,
+      confirmLike: false,
+      confirmComment: false,
+      confirmCall: false,
+      confirmFollow: false,
+      confirmReposts: false,
+      confirmStoryQuickReactions: false,
+      confirmStoryReplies: false,
+      activateFollowAnalyzer: false,
       enableVideoScrubber: false,
-      enableProfilePicPopup: true,
-      enableHighlightPopup: true,
-      enableProfileFollowIndicator: true,
-      blockTypingReceipts: true,
-      hideRecentSearches: true,
+      enableProfilePicPopup: false,
+      enableHighlightPopup: false,
+      enableProfileFollowIndicator: false,
+      blockTypingReceipts: false,
+      hideRecentSearches: false,
       disableTabSearch: false,
       disableTabExplore: false,
       disableTabReels: false,
@@ -104,19 +102,19 @@ document.addEventListener("DOMContentLoaded", () => {
       disableTabProfile: false,
       disableTabMoreFromMeta: false,
       hideDMPopup: false,
-      enableMessageEditShortcut: true,
-      enableMessageReplyShortcut: true,
-      enableMessageDoubleTapLike: true,
+      enableMessageEditShortcut: false,
+      enableMessageReplyShortcut: false,
+      enableMessageDoubleTapLike: false,
       enableMessageLogger: false,
-      showExactTime: true,
+      showExactTime: false,
       timeFormat: "default",
-      enableCallTimer: true,
-      enableProfileComments: true,
+      enableCallTimer: false,
+      enableProfileComments: false,
     },
     (settings) => {
-      if (settings.confirmLikes) interceptLikes();
-      if (settings.confirmComments) interceptComments();
-      if (settings.confirmCalls) interceptCalls();
+      if (settings.confirmLike) interceptLikes();
+      if (settings.confirmComment) interceptComments();
+      if (settings.confirmCall) interceptCalls();
       if (settings.confirmFollow) interceptFollows();
       if (settings.confirmReposts) interceptReposts();
       if (settings.confirmStoryQuickReactions) interceptStoryQuickReactions();
@@ -192,43 +190,68 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // If this is a fresh install, enable follow analyzer by default
-      chrome.storage.sync.get(null, (allSettings) => {
-        if (Object.keys(allSettings).length === 0) {
-          chrome.storage.sync.set({ activateFollowAnalyzer: true });
+      // Initialize follow analyzer button injection (same pattern as profile comments)
+      if (settings.activateFollowAnalyzer) {
+        try {
+          setScanButtonEnabled(true);
+          injectScanButton();
+          setTimeout(() => injectScanButton(), 500);
+          setTimeout(() => injectScanButton(), 1500);
+          setTimeout(() => injectScanButton(), 3000);
+        } catch (err) {
+          console.error("Instafn: Error initializing follow analyzer:", err);
         }
-      });
+      }
     }
   );
 });
 
-// Inject story blocking immediately
-injectScript("content/features/story-blocking/storyblocking.js");
-
-// Inject branding styles immediately
+// Inject branding styles immediately (always enabled for branding)
 injectBrandingStyles();
 
-// Inject WebSocket sniffer into page context (must be done early)
-// This needs to happen early to catch WebSocket connections, but logger initialization
-// is conditional based on settings (done in DOMContentLoaded)
-injectScript("content/features/message-logger/socket-sniffer.js");
-injectScript("content/features/message-logger/graphql-sniffer.js");
+// Inject story blocking script only if feature is enabled
+chrome.storage.sync.get({ blockStorySeen: false }, (settings) => {
+  if (settings.blockStorySeen) {
+    injectScript("content/features/story-blocking/storyblocking.js");
+  }
+});
+
+// Inject WebSocket sniffer into page context only if message logger is enabled
+// This needs to happen early to catch WebSocket connections
+chrome.storage.sync.get({ enableMessageLogger: false }, (settings) => {
+  if (settings.enableMessageLogger) {
+    injectScript("content/features/message-logger/socket-sniffer.js");
+    injectScript("content/features/message-logger/graphql-sniffer.js");
+  }
+});
 
 // Initialize typing receipt blocker early (before DOMContentLoaded)
 // This needs to happen early to catch WebSocket connections
-// Always inject the script first, then set the flag from storage
-chrome.storage.sync.get({ blockTypingReceipts: true }, (settings) => {
-  initTypingReceiptBlocker(settings.blockTypingReceipts);
+// Only initialize if enabled
+chrome.storage.sync.get({ blockTypingReceipts: false }, (settings) => {
+  if (settings.blockTypingReceipts) {
+    initTypingReceiptBlocker(settings.blockTypingReceipts);
+  }
 });
 
 // Message logger initialization is done in DOMContentLoaded based on settings
 
 // Initialize follow analyzer early to prevent flash (before DOMContentLoaded)
-initFollowAnalyzerEarly();
+// Only initialize if enabled
+chrome.storage.sync.get({ activateFollowAnalyzer: false }, (settings) => {
+  if (settings.activateFollowAnalyzer) {
+    initFollowAnalyzerEarly();
+  }
+});
 
 // Set up profile follow indicator message listener early (before DOMContentLoaded)
 // This ensures we catch GraphQL responses even on fast refreshes
-setupGraphQLMessageListenerEarly();
+// Only set up if the feature is enabled
+chrome.storage.sync.get({ enableProfileFollowIndicator: false }, (settings) => {
+  if (settings.enableProfileFollowIndicator) {
+    setupGraphQLMessageListenerEarly();
+  }
+});
 
 // Message logger initialization is done in DOMContentLoaded based on settings
 
@@ -263,41 +286,29 @@ window.addEventListener("message", async (event) => {
   }
 });
 
-// Inject scan button ONLY when on user's own profile page
-let scanButtonTimeout = null;
-async function checkAndInjectScanButton() {
-  const path = window.location.pathname;
-  const isProfilePage = path.match(/^\/([^\/]+)\/?$/);
-
-  if (!isProfilePage) {
-    removeScanButton();
-    return;
-  }
-
-  // Check if it's the user's own profile BEFORE injecting
-  try {
-    const me = await getMeCached();
-    if (!me || !(await isOwnProfile())) {
+// Inject scan button on navigation (same pattern as profile comments)
+// Only if feature is enabled
+function checkAndInjectScanButton() {
+  chrome.storage.sync.get({ activateFollowAnalyzer: false }, (settings) => {
+    if (!settings.activateFollowAnalyzer) {
       removeScanButton();
       return;
     }
-  } catch (err) {
-    // If we can't determine, don't inject
-    removeScanButton();
-    return;
-  }
 
-  // Clear any pending timeouts to avoid multiple calls
-  if (scanButtonTimeout) {
-    clearTimeout(scanButtonTimeout);
-  }
+    const path = window.location.pathname;
+    const isProfilePage = path.match(/^\/([^\/]+)\/?$/);
 
-  // Try immediately first (same pattern as comment button)
-  injectScanButton();
-  // Then try again with multiple delays to catch DOM changes (same pattern as comment button)
-  setTimeout(injectScanButton, 500);
-  setTimeout(injectScanButton, 1500);
-  setTimeout(injectScanButton, 3000);
+    if (!isProfilePage) {
+      removeScanButton();
+      return;
+    }
+
+    // injectScanButton() will check if it's own profile synchronously
+    injectScanButton();
+    setTimeout(injectScanButton, 500);
+    setTimeout(injectScanButton, 1500);
+    setTimeout(injectScanButton, 3000);
+  });
 }
 
 // Check for profile pages on navigation
@@ -308,6 +319,13 @@ watchUrlChanges(() => {
 // Initial check
 checkAndInjectScanButton();
 
+// Set up DOM observer to watch for button container changes (similar to profile comments)
+chrome.storage.sync.get({ activateFollowAnalyzer: false }, (settings) => {
+  if (settings.activateFollowAnalyzer) {
+    setupScanButtonObserver();
+  }
+});
+
 // Listen for storage changes to update video scrubber and search cleaner
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === "sync" && changes.enableVideoScrubber) {
@@ -317,10 +335,26 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     initHideRecentSearches(changes.hideRecentSearches.newValue);
   }
   if (namespace === "sync" && changes.blockStorySeen) {
-    initManualStorySeenButton(changes.blockStorySeen.newValue);
+    if (changes.blockStorySeen.newValue) {
+      // Inject story blocking script if enabling
+      injectScript("content/features/story-blocking/storyblocking.js");
+      initManualStorySeenButton(true);
+    } else {
+      initManualStorySeenButton(false);
+    }
   }
   if (namespace === "sync" && changes.blockTypingReceipts) {
     initTypingReceiptBlocker(changes.blockTypingReceipts.newValue);
+  }
+  // Handle follow analyzer settings changes
+  if (namespace === "sync" && changes.activateFollowAnalyzer) {
+    setScanButtonEnabled(changes.activateFollowAnalyzer.newValue);
+    if (changes.activateFollowAnalyzer.newValue) {
+      injectScanButton();
+      setTimeout(() => injectScanButton(), 500);
+      setTimeout(() => injectScanButton(), 1500);
+      setTimeout(() => injectScanButton(), 3000);
+    }
   }
   // Handle exact time display settings changes
   if (namespace === "sync" && (changes.showExactTime || changes.timeFormat)) {
@@ -373,24 +407,17 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     // Handle message logger settings changes
     if (changes.enableMessageLogger) {
       if (changes.enableMessageLogger.newValue) {
+        // Inject scripts if enabling
+        injectScript("content/features/message-logger/socket-sniffer.js");
+        injectScript("content/features/message-logger/graphql-sniffer.js");
         initMessageLogger();
         setupMessageViewer();
-      } else {
-        // Disable message logger - remove button and stop logging
-        const button = document.querySelector(
-          '[data-instafn-message-viewer-btn="true"]'
-        );
-        if (button) button.remove();
-        // Note: We don't stop the logger itself, just hide the UI
-        // The logger will continue to run but won't be visible
       }
     }
     // Handle profile follow indicator settings changes
     if (changes.enableProfileFollowIndicator) {
       if (changes.enableProfileFollowIndicator.newValue) {
         initProfileFollowIndicator();
-      } else {
-        disableProfileFollowIndicator();
       }
     }
     // Handle call timer settings changes
@@ -409,8 +436,6 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         } catch (err) {
           console.error("Instafn: Error initializing profile comments:", err);
         }
-      } else {
-        disableProfileComments();
       }
     }
   }

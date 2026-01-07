@@ -6,6 +6,10 @@ export {
   renderScanButton,
   confirmWithModal,
   initFollowAnalyzerEarly,
+  setupScanButtonObserver,
+  resetRetryCount,
+  getCurrentUsername,
+  setScanButtonEnabled,
 } from "./ui.js";
 export {
   fetchUserInfo,

@@ -8,6 +8,9 @@ import { createModal } from "../../../ui/modal.js";
 
 let sidebarOpen = false;
 
+/**
+ * Close comments sidebar
+ */
 export function closeCommentsSidebar() {
   const overlay = document.getElementById(SIDEBAR_ID + "-overlay");
   if (overlay) {
@@ -16,12 +19,23 @@ export function closeCommentsSidebar() {
   sidebarOpen = false;
 }
 
+/**
+ * Handle posting a comment
+ */
 async function handlePostComment(username, input, container) {
   const text = input.value.trim();
   if (!text) return;
 
+  // Read parentId from both dataset and getAttribute for compatibility
   const parentId =
     input.dataset.replyingTo || input.getAttribute("data-replying-to") || null;
+  console.log(
+    `[Instafn Profile Comments] Posting comment - parentId: ${parentId ||
+      "null"}, text: ${text.substring(0, 50)}..., dataset.replyingTo: ${input
+      .dataset.replyingTo || "undefined"}, getAttribute: ${input.getAttribute(
+      "data-replying-to"
+    ) || "null"}`
+  );
   const postBtn =
     container
       .closest(".instafn-comments-sidebar")
@@ -32,6 +46,7 @@ async function handlePostComment(username, input, container) {
     postBtn.disabled = true;
     postBtn.setAttribute("aria-disabled", "true");
     postBtn.setAttribute("tabindex", "-1");
+    // Add posting feedback
     const originalText = postBtn.querySelector("span")?.textContent || "Post";
     if (postBtn.querySelector("span")) {
       postBtn.querySelector("span").textContent = "Posting...";
@@ -41,9 +56,19 @@ async function handlePostComment(username, input, container) {
 
   try {
     const newComment = await postComment(username, text, parentId);
-    const comments = await loadComments(username);
-    await renderComments(container, comments, username, SIDEBAR_ID);
+    // Reload comments
+    try {
+      const comments = await loadComments(username);
+      await renderComments(container, comments, username, SIDEBAR_ID);
+    } catch (loadError) {
+      console.error(
+        "[Instafn Profile Comments] Failed to reload comments after posting:",
+        loadError
+      );
+      await renderComments(container, [], username, SIDEBAR_ID, loadError);
+    }
     input.value = "";
+    // Clear both dataset and attribute
     input.dataset.replyingTo = "";
     input.removeAttribute("data-replying-to");
     input.placeholder = "Add a comment...";
@@ -79,6 +104,9 @@ async function handlePostComment(username, input, container) {
   }
 }
 
+/**
+ * Create and show the comments sidebar
+ */
 export async function showCommentsSidebar() {
   if (sidebarOpen) return;
 
@@ -87,19 +115,23 @@ export async function showCommentsSidebar() {
 
   sidebarOpen = true;
 
+  // Test Supabase connection on first open (for debugging)
   if (!window.instafnSupabaseTested) {
     window.instafnSupabaseTested = true;
     await testSupabaseConnection();
   }
 
+  // Create sidebar overlay
   const overlay = document.createElement("div");
   overlay.className = "instafn-comments-overlay";
   overlay.id = SIDEBAR_ID + "-overlay";
 
+  // Create sidebar
   const sidebar = document.createElement("div");
   sidebar.className = "instafn-comments-sidebar";
   sidebar.id = SIDEBAR_ID;
 
+  // Header
   const header = document.createElement("div");
   header.className = "instafn-comments-header";
   header.innerHTML = `
@@ -113,9 +145,11 @@ export async function showCommentsSidebar() {
     </button>
   `;
 
+  // Comments container
   const commentsContainer = document.createElement("div");
   commentsContainer.className = "instafn-comments-container";
 
+  // Loading state
   commentsContainer.innerHTML = `
     <div class="instafn-comments-loading">
       <div class="instafn-loading-spinner"></div>
@@ -123,6 +157,7 @@ export async function showCommentsSidebar() {
     </div>
   `;
 
+  // Input area - pill-shaped with post button inside
   const inputArea = document.createElement("div");
   inputArea.className = "instafn-comment-input-area";
   inputArea.innerHTML = `
@@ -140,6 +175,7 @@ export async function showCommentsSidebar() {
   overlay.appendChild(sidebar);
   document.body.appendChild(overlay);
 
+  // Close handlers
   const closeBtn = header.querySelector(".instafn-comments-close");
   closeBtn.addEventListener("click", closeCommentsSidebar);
 
@@ -149,6 +185,7 @@ export async function showCommentsSidebar() {
     }
   });
 
+  // Escape key handler
   const escapeHandler = (e) => {
     if (e.key === "Escape" && sidebarOpen) {
       closeCommentsSidebar();
@@ -157,9 +194,16 @@ export async function showCommentsSidebar() {
   };
   document.addEventListener("keydown", escapeHandler);
 
-  const comments = await loadComments(username);
-  await renderComments(commentsContainer, comments, username, SIDEBAR_ID);
+  // Load comments
+  try {
+    const comments = await loadComments(username);
+    await renderComments(commentsContainer, comments, username, SIDEBAR_ID);
+  } catch (error) {
+    console.error("[Instafn Profile Comments] Failed to load comments:", error);
+    await renderComments(commentsContainer, [], username, SIDEBAR_ID, error);
+  }
 
+  // Input handler
   const input = inputArea.querySelector(".instafn-comment-input");
   const postBtn = inputArea.querySelector(".instafn-comment-post-btn");
 
@@ -168,6 +212,7 @@ export async function showCommentsSidebar() {
     return;
   }
 
+  // Auto-resize textarea
   const autoResize = () => {
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 100)}px`;
@@ -196,10 +241,10 @@ export async function showCommentsSidebar() {
     }
   });
 
+  // Focus input
   setTimeout(() => input.focus(), 100);
 }
 
 export function isSidebarOpen() {
   return sidebarOpen;
 }
-

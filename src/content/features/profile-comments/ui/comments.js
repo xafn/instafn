@@ -3,6 +3,9 @@ import { formatRelativeTime, formatFullDate } from "../utils.js";
 import { getUserProfilePic, getVerifiedCurrentUser } from "../profile.js";
 import { handleLikeComment, handleDeleteComment } from "../comments-api.js";
 
+/**
+ * Handle reply to comment
+ */
 export function handleReplyComment(commentId, sidebarId) {
   const sidebar = document.getElementById(sidebarId);
   if (!sidebar) return;
@@ -10,25 +13,40 @@ export function handleReplyComment(commentId, sidebarId) {
   const input = sidebar.querySelector(".instafn-comment-input");
   if (input) {
     input.focus();
+    // Use both dataset and setAttribute for compatibility
     input.dataset.replyingTo = commentId;
     input.setAttribute("data-replying-to", commentId);
     input.placeholder = `Reply to comment...`;
+    console.log(
+      `[Instafn Profile Comments] Reply button clicked - setting parentId: ${commentId}, verified: ${input
+        .dataset.replyingTo || input.getAttribute("data-replying-to")}`
+    );
+  } else {
+    console.error(
+      "[Instafn Profile Comments] Could not find comment input element"
+    );
   }
 }
 
+/**
+ * Attach event listeners to reply elements
+ */
 export function attachReplyEventListeners(repliesList, replies, sidebarId) {
   if (!repliesList || !replies) return;
 
   replies.forEach((reply) => {
+    // Find the reply element by comment ID
     const replyEl = repliesList.querySelector(
       `li[data-reply-username="${escapeHtml(reply.username)}"]`
     );
     if (!replyEl) return;
 
+    // Attach like button listener
     const replyLikeHeart = replyEl.querySelector(
       `.instafn-comment-like-heart[data-comment-id="${reply.id}"]`
     );
     if (replyLikeHeart) {
+      // Remove any existing listeners by cloning
       const newLikeHeart = replyLikeHeart.cloneNode(true);
       replyLikeHeart.parentNode.replaceChild(newLikeHeart, replyLikeHeart);
       newLikeHeart.addEventListener("click", () => {
@@ -36,6 +54,7 @@ export function attachReplyEventListeners(repliesList, replies, sidebarId) {
       });
     }
 
+    // Attach reply button listener
     const replyReplyBtn = replyEl.querySelector(
       `.instafn-comment-reply-btn[data-comment-id="${reply.id}"]`
     );
@@ -47,6 +66,7 @@ export function attachReplyEventListeners(repliesList, replies, sidebarId) {
       });
     }
 
+    // Attach delete button listener
     const replyDeleteBtn = replyEl.querySelector(
       `.instafn-comment-delete-btn[data-comment-id="${reply.id}"]`
     );
@@ -60,13 +80,27 @@ export function attachReplyEventListeners(repliesList, replies, sidebarId) {
   });
 }
 
+/**
+ * Create a comment element matching Instagram's exact structure
+ * Uses placeholder images initially - profile pics are lazy loaded
+ */
 export function createCommentElement(comment, currentUser, sidebarId) {
   const li = document.createElement("li");
   li.className = "_a9zj _a9zl";
   li.dataset.commentId = comment.id;
 
+  // DEBUG: Log what we're getting
+  console.log("[Instafn Profile Comments] Creating comment element:", {
+    commentId: comment.id,
+    commentUsername: comment.username,
+    commentUserId: comment.userId,
+    currentUserUsername: currentUser?.username,
+    currentUserId: currentUser?.userId,
+  });
+
   const isOwnComment = currentUser && comment.userId === currentUser.userId;
 
+  // CRITICAL: Use comment.username (the commenter's username), NOT profileUsername
   const commenterUsername = comment.username;
   if (!commenterUsername) {
     console.error(
@@ -75,9 +109,11 @@ export function createCommentElement(comment, currentUser, sidebarId) {
     );
   }
 
+  // Use placeholder image initially - will be lazy loaded
   const placeholderPic =
     "https://instagram.com/static/images/anonymousUser.jpg/23e7b3b2a737.jpg";
 
+  // Store username in data attribute for lazy loading
   li.dataset.commenterUsername = commenterUsername;
 
   li.innerHTML = `
@@ -222,6 +258,7 @@ export function createCommentElement(comment, currentUser, sidebarId) {
     }
   `;
 
+  // Add event listeners
   const likeHeart = li.querySelector(".instafn-comment-like-heart");
   if (likeHeart) {
     likeHeart.addEventListener("click", () => {
@@ -252,8 +289,10 @@ export function createCommentElement(comment, currentUser, sidebarId) {
           ? `View replies (${comment.replies.length})`
           : `Hide replies (${comment.replies.length})`;
 
+        // Lazy load profile pics when replies are shown
         if (!isShowing) {
           lazyLoadProfilePics(repliesList);
+          // Attach event listeners to reply elements when they're shown
           attachReplyEventListeners(
             repliesList,
             comment.replies || [],
@@ -267,9 +306,15 @@ export function createCommentElement(comment, currentUser, sidebarId) {
   return li;
 }
 
+/**
+ * Lazy load profile pictures for all comments
+ * Uses batching and delays to avoid rate limiting
+ */
 export async function lazyLoadProfilePics(container) {
+  // Find all images that need to be loaded
   const images = container.querySelectorAll("img.instafn-lazy-profile-pic");
 
+  // Get unique usernames to avoid duplicate fetches
   const usernameToImg = new Map();
   images.forEach((img) => {
     const username = img.dataset.username;
@@ -284,16 +329,20 @@ export async function lazyLoadProfilePics(container) {
   const usernames = Array.from(usernameToImg.keys());
   if (usernames.length === 0) return;
 
+  // Batch requests with delays to avoid rate limiting
+  // Process in batches of 3 with 500ms delay between batches
   const BATCH_SIZE = 3;
   const BATCH_DELAY = 500;
 
   for (let i = 0; i < usernames.length; i += BATCH_SIZE) {
     const batch = usernames.slice(i, i + BATCH_SIZE);
 
+    // Process batch in parallel
     const batchPromises = batch.map(async (username) => {
       try {
         const profilePic = await getUserProfilePic(username);
 
+        // Only update if we got a valid profile pic (not null/undefined)
         if (profilePic) {
           const imgElements = usernameToImg.get(username);
           if (imgElements) {
@@ -302,6 +351,7 @@ export async function lazyLoadProfilePics(container) {
             });
           }
         }
+        // If profilePic is null (rate limited or error), keep placeholder
       } catch (error) {
         console.warn(
           `[Instafn Profile Comments] Failed to load profile pic for ${username}:`,
@@ -310,23 +360,53 @@ export async function lazyLoadProfilePics(container) {
       }
     });
 
+    // Wait for batch to complete
     await Promise.all(batchPromises);
 
+    // Add delay before next batch (except for the last batch)
     if (i + BATCH_SIZE < usernames.length) {
       await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
     }
   }
 }
 
-export async function renderComments(container, comments, username, sidebarId) {
+/**
+ * Render comments in container
+ */
+export async function renderComments(container, comments, username, sidebarId, error = null) {
   let currentUser = null;
   try {
     currentUser = await getVerifiedCurrentUser();
   } catch (e) {
+    // Continue without current user (won't show delete buttons)
     console.warn(
       "[Instafn Profile Comments] Could not get current user for rendering"
     );
   }
+
+  // If there was an error fetching comments, show error message
+  if (error) {
+    container.innerHTML = `
+      <div class="instafn-comments-empty">
+        <div>Failed to fetch comments.</div>
+        <div style="margin-top: 8px; color: rgb(var(--ig-secondary-text)); font-size: 14px;">
+          Please try again later.
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // DEBUG: Log all comments before rendering
+  console.log("[Instafn Profile Comments] Rendering comments:", comments);
+  comments.forEach((c, i) => {
+    console.log(`[Instafn Profile Comments] Comment ${i}:`, {
+      id: c.id,
+      username: c.username,
+      userId: c.userId,
+      text: c.text?.substring(0, 50),
+    });
+  });
 
   if (comments.length === 0) {
     container.innerHTML = `
@@ -343,13 +423,17 @@ export async function renderComments(container, comments, username, sidebarId) {
   container.innerHTML = '<ul class="_a9ym"></ul>';
   const commentsList = container.querySelector("._a9ym");
 
+  // Create all comments synchronously (no async operations)
+  // This makes them appear instantly
   const commentElements = comments.map((comment) =>
     createCommentElement(comment, currentUser, sidebarId)
   );
 
+  // Append all comments at once
   commentElements.forEach((commentEl) => {
     commentsList.appendChild(commentEl);
   });
 
+  // Lazy load profile pictures in the background
   lazyLoadProfilePics(container);
 }

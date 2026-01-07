@@ -39,7 +39,8 @@ export async function loadComments(username) {
           "[Instafn Profile Comments] Rate limited when fetching profile user ID. Using cached data if available."
         );
 
-        return [];
+        // Throw error instead of returning empty array to distinguish from "no comments"
+        throw new Error("Rate limited when fetching profile user ID. Please try again later.");
       }
       throw error;
     }
@@ -103,7 +104,9 @@ export async function loadComments(username) {
       );
     }
 
-    return [];
+    // Throw the error instead of returning empty array so we can distinguish
+    // between "no comments" and "failed to fetch"
+    throw error;
   }
 }
 

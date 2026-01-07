@@ -76,29 +76,3 @@ export function initProfileComments() {
     subtree: true,
   });
 }
-
-/**
- * Disable profile comments feature
- */
-export function disableProfileComments() {
-  isEnabled = false;
-
-  const existing = document.getElementById(BUTTON_ID);
-  if (existing) existing.remove();
-
-  if (isSidebarOpen()) {
-    closeCommentsSidebar();
-  }
-
-  if (urlObserver) {
-    urlObserver.disconnect();
-    urlObserver = null;
-  }
-  if (domObserver) {
-    domObserver.disconnect();
-    domObserver = null;
-  }
-
-  setButtonEnabled(false);
-  resetRetryCount();
-}

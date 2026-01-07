@@ -7,9 +7,12 @@ import {
   updateFriendship,
   getMeCached,
   isOwnProfile,
+  getProfileUsernameFromPath,
 } from "./logic.js";
 import { injectStylesheet } from "../../utils/styleLoader.js";
 import { createModal, confirmModal } from "../../ui/modal.js";
+import { BUTTON_ID as COMMENTS_BUTTON_ID } from "../profile-comments/config.js";
+import { findReferenceButton } from "../profile-comments/ui/button.js";
 
 const ensureStyles = () =>
   injectStylesheet(
@@ -18,30 +21,61 @@ const ensureStyles = () =>
   );
 
 const INLINE_SCAN_BUTTON_SELECTOR = ".instafn-scan-btn:not(.instafn-scan-fab)";
+const SCAN_BUTTON_ID = "instafn-scan-button";
 
-const isElementVisible = (el) => {
-  if (!el) return false;
-  const style = window.getComputedStyle(el);
-  if (style.display === "none" || style.visibility === "hidden") return false;
-  return (
-    el.getBoundingClientRect().width > 0 &&
-    el.getBoundingClientRect().height > 0
-  );
-};
+let currentUsername = null;
+let isInjecting = false;
+let retryCount = 0;
+const MAX_RETRIES = 5;
 
-function findArchiveButton() {
-  const mainRoot =
-    document.querySelector('main[role="main"]') ||
-    document.querySelector("main") ||
-    document.body;
-  return Array.from(
-    mainRoot.querySelectorAll('a[href="/archive/stories/"]')
-  ).find(
-    (el) =>
-      !el.closest("nav") &&
-      !el.closest('[role="navigation"]') &&
-      isElementVisible(el)
+/**
+ * Check if we're on the user's own profile by looking for "Edit profile" or "View archive" buttons
+ * This is synchronous and doesn't require async API calls
+ */
+function isOwnProfileSync() {
+  const buttonTexts = ["Edit profile", "Edit Profile", "View archive"];
+  const allButtons = Array.from(
+    document.querySelectorAll("button, [role='button'], a[role='link']")
   );
+
+  return buttonTexts.some((buttonText) => {
+    return allButtons.some((el) => {
+      const text = el.textContent?.trim();
+      return text === buttonText;
+    });
+  });
+}
+
+/**
+ * Create the Follow Analyzer button wrapper
+ * Clones the structure of a reference button to match Instagram's styling
+ */
+function createScanButtonWrapper(referenceWrapper) {
+  // Clone the reference wrapper's structure
+  const buttonWrapper = document.createElement("div");
+  buttonWrapper.className = referenceWrapper?.className || "html-div";
+  buttonWrapper.id = SCAN_BUTTON_ID;
+
+  // Create the button element - match Instagram's button structure
+  const button = document.createElement("div");
+  button.setAttribute("role", "button");
+  button.setAttribute("tabindex", "0");
+  button.setAttribute("aria-label", "Analyze");
+  button.style.cursor = "pointer";
+  button.className = "instafn-scan-btn";
+  button.innerHTML = `
+    <div class="x6s0dn4 x78zum5 xdt5ytf xl56j7k">
+      <svg aria-label="Analyze" class="x1lliihq x1n2onr6 x5n08af" fill="currentColor" height="16" role="img" viewBox="0 0 24 24" width="16">
+        <title>Analyze</title>
+        <path d="M12 8.252a3.5 3.5 0 1 1-3.499-3.5 3.5 3.5 0 0 1 3.5 3.5Z" fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path>
+        <path d="M15 19.5v-.447a4.05 4.05 0 0 0-4.05-4.049H6.044a4.05 4.05 0 0 0-4.049 4.049v.447" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+      </svg>
+    </div>
+    <div class="_ap3a _aaco _aacw _aad6 _aade" dir="auto">Analyze</div>
+  `;
+
+  buttonWrapper.appendChild(button);
+  return buttonWrapper;
 }
 
 export function createFollowButton(
@@ -95,66 +129,7 @@ export function createFollowButton(
   return btn;
 }
 
-function createScanButton(onClick) {
-  const btn = document.createElement("button");
-  btn.className = "instafn-scan-btn";
-  btn.title = "Scan followers/following";
-  btn.textContent = "Follow analyzer";
-  btn.addEventListener("click", onClick);
-  return btn;
-}
-
-async function placeScanButton() {
-  if (window.top !== window.self) return false;
-
-  // Ensure we're on the user's own profile before placing button
-  const me = await getMeCached();
-  if (!me || !(await isOwnProfile())) {
-    return false;
-  }
-
-  const archiveLink = findArchiveButton();
-  const existingBtn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
-
-  if (existingBtn) {
-    return !!archiveLink;
-  }
-  if (!archiveLink) return false;
-
-  const archiveWrapper = archiveLink.closest(".html-div");
-  if (!archiveWrapper?.parentElement) return false;
-  const archiveContainer = archiveWrapper.parentElement;
-
-  if (archiveContainer.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) return true;
-
-  document.querySelectorAll(".html-div").forEach((wrapper) => {
-    if (wrapper.querySelector(".instafn-scan-btn")) wrapper.remove();
-  });
-
-  archiveContainer.classList.add("instafn-button-container");
-  const btnWrapper = document.createElement("div");
-  btnWrapper.className = archiveWrapper.className;
-  btnWrapper.appendChild(
-    createScanButton(async () => {
-      try {
-        const overlay = await openModal("Follow analysis");
-        await renderScanButton(
-          overlay.querySelector(".instafn-content"),
-          overlay
-        );
-      } catch (err) {
-        alert("Failed to open modal: " + (err?.message || String(err)));
-      }
-    })
-  );
-  archiveContainer.insertBefore(btnWrapper, archiveWrapper.nextSibling);
-  return true;
-}
-
 let scanBtnObserver = null;
-let isInjecting = false;
-let retryCount = 0;
-const MAX_RETRIES = 5;
 
 function injectEarlyHideCSS() {
   if (document.getElementById("instafn-follow-analyzer-early")) return;
@@ -178,107 +153,167 @@ function injectEarlyHideCSS() {
   }
 }
 
-export async function injectScanButton() {
+let isEnabled = false;
+
+/**
+ * Inject the Follow Analyzer button
+ * Only works on own profile (when "Edit profile" or "View archive" buttons are present)
+ */
+export function injectScanButton() {
+  if (!isEnabled) return;
   ensureStyles();
   if (isInjecting) return;
-  if (!/^\/[A-Za-z0-9._]+\/?$/.test(window.location.pathname)) {
+
+  // Only inject on own profile by looking for "Edit profile" or "View archive" buttons
+  if (!isOwnProfileSync()) {
     removeScanButton();
     retryCount = 0;
     return;
   }
 
-  // Check if button already exists
-  if (document.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) {
+  const username = getProfileUsernameFromPath();
+  if (!username) {
+    const existing = document.getElementById(SCAN_BUTTON_ID);
+    if (existing) existing.remove();
+    currentUsername = null;
+    retryCount = 0;
+    return;
+  }
+
+  // Check if button already exists for this profile
+  const existing = document.getElementById(SCAN_BUTTON_ID);
+  if (existing && currentUsername === username) {
+    return; // Already injected for this profile
+  }
+
+  // Remove button if it's for a different profile
+  if (existing && currentUsername !== username) {
+    existing.remove();
+  }
+
+  currentUsername = username;
+
+  // Find reference button (Edit profile or View archive)
+  const reference = findReferenceButton();
+  if (!reference) {
+    if (retryCount < MAX_RETRIES) {
+      retryCount++;
+      console.log(
+        `[Instafn Follow Analyzer] Reference button not found, retrying... (${retryCount}/${MAX_RETRIES})`
+      );
+      setTimeout(() => injectScanButton(), 500);
+    } else {
+      console.warn(
+        "[Instafn Follow Analyzer] Max retries reached, giving up on button injection"
+      );
+      retryCount = 0;
+    }
+    return;
+  }
+
+  // Check if button already exists in this container
+  if (reference.container.querySelector(`#${SCAN_BUTTON_ID}`)) {
     retryCount = 0;
     return;
   }
 
   isInjecting = true;
   try {
-    const me = await getMeCached();
-    if (!me || !(await isOwnProfile())) {
-      removeScanButton();
-      retryCount = 0;
-      return;
+    // Add instafn-button-container class to ensure equal flex distribution
+    reference.container.classList.add("instafn-button-container");
+
+    // Create button wrapper matching the reference wrapper's style
+    const buttonWrapper = createScanButtonWrapper(reference.wrapper);
+
+    // Attach click handler
+    const button = buttonWrapper.querySelector('[role="button"]');
+    if (button) {
+      button.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          const overlay = await openModal("Follow analysis");
+          await renderScanButton(
+            overlay.querySelector(".instafn-content"),
+            overlay
+          );
+        } catch (err) {
+          alert("Failed to open modal: " + (err?.message || String(err)));
+        }
+      });
     }
 
-    const settings = await new Promise((resolve) => {
-      chrome.storage.sync.get({ activateFollowAnalyzer: true }, resolve);
-    });
-    if (!settings.activateFollowAnalyzer) {
-      document
-        .querySelectorAll(".instafn-scan-btn, .instafn-scan-fab")
-        .forEach((el) => el.remove());
-      retryCount = 0;
-      return;
-    }
-
-    // Try to place the button
-    const placed = await placeScanButton();
-    if (placed) {
-      document
-        .querySelector(INLINE_SCAN_BUTTON_SELECTOR)
-        ?.classList.add("instafn-visible");
-      retryCount = 0;
+    // Insert after comments button if it exists, otherwise after reference wrapper
+    const commentsButton = reference.container.querySelector(
+      `#${COMMENTS_BUTTON_ID}`
+    );
+    const insertAfter = commentsButton || reference.wrapper;
+    if (insertAfter.nextSibling) {
+      reference.container.insertBefore(buttonWrapper, insertAfter.nextSibling);
     } else {
-      // If placement failed, retry with exponential backoff
-      if (retryCount < MAX_RETRIES) {
-        retryCount++;
-        console.log(
-          `[Instafn Follow Analyzer] Archive button not found, retrying... (${retryCount}/${MAX_RETRIES})`
-        );
-        setTimeout(injectScanButton, 500);
-        return;
-      } else {
-        console.warn(
-          "[Instafn Follow Analyzer] Max retries reached, giving up on button injection"
-        );
-        retryCount = 0;
-        removeScanButton();
-      }
+      reference.container.appendChild(buttonWrapper);
     }
 
-    // Set up observer if not already set up
-    if (!scanBtnObserver) {
-      scanBtnObserver = new MutationObserver(async () => {
-        // Always verify it's the user's own profile before any action
-        const me = await getMeCached();
-        if (!me || !(await isOwnProfile())) {
-          removeScanButton();
-          return;
-        }
-        // Check if button doesn't exist and we're on own profile
-        if (!document.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) {
-          if (findArchiveButton()) {
-            // Archive button exists but our button doesn't - inject it
-            // placeScanButton() will also verify it's own profile
-            const placed = await placeScanButton();
-            if (placed) {
-              document
-                .querySelector(INLINE_SCAN_BUTTON_SELECTOR)
-                ?.classList.add("instafn-visible");
-            }
-          }
-        }
-      });
-      scanBtnObserver.observe(document.body || document.documentElement, {
-        childList: true,
-        subtree: true,
-      });
-    }
+    console.log("[Instafn Follow Analyzer] Button injected successfully");
+    retryCount = 0;
   } finally {
     isInjecting = false;
   }
 }
 
+export function setScanButtonEnabled(enabled) {
+  isEnabled = enabled;
+  if (!enabled) {
+    removeScanButton();
+    currentUsername = null;
+    retryCount = 0;
+  }
+}
+
+/**
+ * Set up DOM observer to watch for button container changes
+ * Should be called once during initialization
+ */
+export function setupScanButtonObserver() {
+  if (scanBtnObserver) return; // Already set up
+
+  scanBtnObserver = new MutationObserver(() => {
+    // Only inject on own profile
+    if (!isOwnProfileSync()) {
+      removeScanButton();
+      return;
+    }
+    const username = getProfileUsernameFromPath();
+    if (username && !document.getElementById(SCAN_BUTTON_ID)) {
+      // Button doesn't exist but we're on own profile - try to inject
+      injectScanButton();
+    }
+  });
+  scanBtnObserver.observe(document.body || document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+}
+
 export function removeScanButton() {
-  document
-    .querySelectorAll(".instafn-scan-btn, .instafn-scan-fab")
-    .forEach((el) => el.remove());
+  const existing = document.getElementById(SCAN_BUTTON_ID);
+  if (existing) existing.remove();
+  // Also remove any FAB buttons
+  document.querySelectorAll(".instafn-scan-fab").forEach((el) => el.remove());
+  currentUsername = null;
+  retryCount = 0;
   if (scanBtnObserver) {
     scanBtnObserver.disconnect();
     scanBtnObserver = null;
   }
+}
+
+export function resetRetryCount() {
+  retryCount = 0;
+}
+
+export function getCurrentUsername() {
+  return currentUsername;
 }
 
 export function initFollowAnalyzerEarly() {
