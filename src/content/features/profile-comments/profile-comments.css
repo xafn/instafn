@@ -144,6 +144,38 @@
   list-style: none;
 }
 
+/* Remove side padding for replies so like heart is visible */
+.instafn-comments-container .instafn-comment-replies ._a9ym ._a9zj._a9zl,
+.instafn-comments-sidebar .instafn-comment-replies ._a9ym ._a9zj._a9zl {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* Ensure reply content doesn't overflow */
+.instafn-comments-container .instafn-comment-replies ._a9zm,
+.instafn-comments-sidebar .instafn-comment-replies ._a9zm {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.instafn-comments-container .instafn-comment-replies ._a9zr,
+.instafn-comments-sidebar .instafn-comment-replies ._a9zr {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.instafn-comments-container .instafn-comment-replies ._a9zu,
+.instafn-comments-sidebar .instafn-comment-replies ._a9zu {
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+}
+
 .instafn-comments-container ._a9zj._a9zl,
 .instafn-comments-sidebar ._a9zj._a9zl {
   padding: 16px;
@@ -202,12 +234,13 @@
 
 /* Comment header: username + comment text on same line, text wraps under username */
 .instafn-comment-header-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  flex-wrap: wrap;
   margin: 0;
   padding: 0;
+  font-size: 14px;
+  line-height: 18px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .instafn-comment-username,
@@ -217,10 +250,9 @@ a.instafn-comment-input-area {
   font-weight: 600;
   font-size: 14px;
   line-height: 18px;
-  flex-shrink: 0;
   margin: 0;
   padding: 0;
-  white-space: nowrap;
+  display: inline;
 }
 
 .instafn-comment-username:hover {
@@ -233,8 +265,8 @@ a.instafn-comment-input-area {
   font-size: 14px;
   line-height: 18px;
   word-wrap: break-word;
-  flex: 1;
-  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
   margin: 0;
   padding: 0;
   display: inline;
@@ -379,6 +411,8 @@ a.instafn-comment-input-area {
   clear: both;
   flex-shrink: 0;
   order: 10;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .instafn-view-replies {
@@ -390,7 +424,6 @@ a.instafn-comment-input-area {
   font-family: var(--font-family-system);
   font-weight: var(--font-weight-system-semibold);
   padding: 4px 0;
-  margin-bottom: 8px;
   transition: color 0.2s;
 }
 
@@ -419,20 +452,24 @@ a.instafn-comment-input-area {
   z-index: 10;
 }
 
-.instafn-comment-input-area section {
+.instafn-comment-input-section {
   padding: 16px;
 }
 
-.instafn-comment-input-area .x1y1aw1k {
+.instafn-comment-input-pill {
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
-  min-height: 24px !important;
-  width: 100% !important;
+  border: 1px solid rgb(var(--ig-separator)) !important;
+  border-radius: 9999px !important;
+  padding: 8px 16px !important;
+  background: transparent !important;
+  gap: 12px !important;
+  min-height: 40px !important;
+  box-sizing: border-box !important;
 }
 
 .instafn-comment-input {
-  flex: 1;
+  flex: 1 !important;
   background: transparent !important;
   border: none !important;
   outline: none !important;
@@ -442,7 +479,6 @@ a.instafn-comment-input-area {
   resize: none !important;
   min-height: 24px !important;
   max-height: 100px !important;
-  width: 100% !important;
   padding: 0 !important;
   margin: 0 !important;
   line-height: 18px !important;
@@ -450,6 +486,7 @@ a.instafn-comment-input-area {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
+  text-align: left !important;
 }
 
 .instafn-comment-input::placeholder {
@@ -457,15 +494,20 @@ a.instafn-comment-input-area {
 }
 
 .instafn-comment-post-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: var(--system-14-font-size);
-  color: rgb(var(--ig-colors-link));
-  font-family: var(--font-family-system);
-  font-weight: var(--font-weight-system-semibold);
-  padding: 4px 8px;
-  transition: opacity 0.2s;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: var(--system-14-font-size) !important;
+  color: rgb(var(--ig-colors-link)) !important;
+  font-family: var(--font-family-system) !important;
+  font-weight: var(--font-weight-system-semibold) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  transition: opacity 0.2s !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .instafn-comment-post-btn:hover:not(:disabled) {
@@ -479,7 +521,9 @@ a.instafn-comment-input-area {
 
 /* Comments button styling - matches Instagram's button structure */
 /* Ensure button container has equal flex distribution (same pattern as follow analyzer) */
-.instafn-button-container {
+/* Only apply to profile page buttons, NOT modal buttons */
+header .instafn-button-container,
+section .instafn-button-container {
   display: flex !important;
   gap: 12px !important;
   justify-content: center !important;
@@ -494,14 +538,16 @@ a.instafn-comment-input-area {
 
 /* Only apply equal flex to html-div wrappers (profile page buttons), not modal buttons */
 /* Exclude Similar accounts button (icon-only button) from flex distribution */
-.instafn-button-container > .html-div:not(:has(svg[aria-label="Similar accounts"])) {
+header .instafn-button-container > .html-div:not(:has(svg[aria-label="Similar accounts"])),
+section .instafn-button-container > .html-div:not(:has(svg[aria-label="Similar accounts"])) {
   flex: 1 !important;
   display: flex !important;
   min-width: 0 !important;
 }
 
 /* Similar accounts button should not flex - it's a fixed-width icon button */
-.instafn-button-container > .html-div:has(svg[aria-label="Similar accounts"]) {
+header .instafn-button-container > .html-div:has(svg[aria-label="Similar accounts"]),
+section .instafn-button-container > .html-div:has(svg[aria-label="Similar accounts"]) {
   flex: 0 0 auto !important;
   display: flex !important;
   min-width: auto !important;

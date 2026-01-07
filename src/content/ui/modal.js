@@ -418,7 +418,9 @@ export async function createModal(titleText, options = {}) {
     <line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="21" x2="3" y1="3" y2="21"></line>
     <line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="21" x2="3" y1="21" y2="3"></line>
   </svg>`;
-  close.addEventListener("click", () => overlay.remove());
+  close.addEventListener("click", () => {
+    overlay.remove();
+  });
 
   header.appendChild(headerLeft);
   header.appendChild(close);
@@ -519,7 +521,9 @@ export function confirmModal({
         overlay.removeEventListener("click", originalClickHandler);
       }
       overlay._clickHandler = (e) => {
-        if (e.target === overlay) cleanupAndResolve(false);
+        if (e.target === overlay) {
+          cleanupAndResolve(false);
+        }
       };
       overlay.addEventListener("click", overlay._clickHandler);
     } catch (err) {

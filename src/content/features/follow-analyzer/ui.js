@@ -104,8 +104,15 @@ function createScanButton(onClick) {
   return btn;
 }
 
-function placeScanButton() {
+async function placeScanButton() {
   if (window.top !== window.self) return false;
+
+  // Ensure we're on the user's own profile before placing button
+  const me = await getMeCached();
+  if (!me || !(await isOwnProfile())) {
+    return false;
+  }
+
   const archiveLink = findArchiveButton();
   const existingBtn = document.querySelector(INLINE_SCAN_BUTTON_SELECTOR);
 
@@ -207,7 +214,8 @@ export async function injectScanButton() {
     }
 
     // Try to place the button
-    if (placeScanButton()) {
+    const placed = await placeScanButton();
+    if (placed) {
       document
         .querySelector(INLINE_SCAN_BUTTON_SELECTOR)
         ?.classList.add("instafn-visible");
@@ -233,6 +241,7 @@ export async function injectScanButton() {
     // Set up observer if not already set up
     if (!scanBtnObserver) {
       scanBtnObserver = new MutationObserver(async () => {
+        // Always verify it's the user's own profile before any action
         const me = await getMeCached();
         if (!me || !(await isOwnProfile())) {
           removeScanButton();
@@ -242,10 +251,13 @@ export async function injectScanButton() {
         if (!document.querySelector(INLINE_SCAN_BUTTON_SELECTOR)) {
           if (findArchiveButton()) {
             // Archive button exists but our button doesn't - inject it
-            placeScanButton();
-            document
-              .querySelector(INLINE_SCAN_BUTTON_SELECTOR)
-              ?.classList.add("instafn-visible");
+            // placeScanButton() will also verify it's own profile
+            const placed = await placeScanButton();
+            if (placed) {
+              document
+                .querySelector(INLINE_SCAN_BUTTON_SELECTOR)
+                ?.classList.add("instafn-visible");
+            }
           }
         }
       });
