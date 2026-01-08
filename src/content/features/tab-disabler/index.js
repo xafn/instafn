@@ -31,34 +31,33 @@ const TAB_RULES = [
   },
   {
     key: "notifications",
-    match: ({ href, ariaLabel, text }) =>
-      (href === "#" || !href) &&
-      (ariaLabel === "Notifications" || text === "notifications"),
+    match: ({ href, ariaLabel, text }) => {
+      // Exclude messages tab - it has "direct messaging" in aria-label
+      if (ariaLabel && ariaLabel.toLowerCase().includes("direct messaging")) {
+        return false;
+      }
+      // Exclude messages tab - it has "messages" in text
+      if (text && text.toLowerCase().includes("messages")) {
+        return false;
+      }
+      // Must have notifications as the primary label, and href should be # or empty
+      const hasNotificationsLabel =
+        ariaLabel === "Notifications" ||
+        (ariaLabel && ariaLabel.toLowerCase().startsWith("notification"));
+      const hasNotificationsText =
+        text === "notifications" ||
+        (text && text.toLowerCase().trim() === "notifications");
+      return (
+        (href === "#" || !href) &&
+        (hasNotificationsLabel || hasNotificationsText)
+      );
+    },
   },
   {
     key: "create",
     match: ({ href, ariaLabel, text }) =>
       (href === "#" || !href) &&
       (ariaLabel === "New post" || text === "create"),
-  },
-  {
-    key: "profile",
-    match: ({ href, ariaLabel, text, link }) => {
-      const hasProfilePic = link.querySelector(
-        'img[alt*="profile picture"], span[role="link"] img[alt*="profile picture"]'
-      );
-      const isUsernamePath =
-        href &&
-        /^\/[^\/]+\/?$/.test(href) &&
-        href !== "/explore/" &&
-        href !== "/reels/" &&
-        href !== "/";
-      return (
-        (isUsernamePath && hasProfilePic) ||
-        ariaLabel === "Profile" ||
-        (text === "profile" && hasProfilePic)
-      );
-    },
   },
   {
     key: "moreFromMeta",
@@ -194,11 +193,10 @@ function injectEarlyHideCSS(disabledTabsSet) {
 
   if (disabledTabsSet.has("notifications")) {
     cssRules.push(`
-      a[role="link"][href="#"]:has(svg[aria-label="Notifications"]),
-      a[role="link"][aria-label="Notifications"],
-      a[role="link"][aria-label*="Notification" i],
-      a[role="link"]:has(svg[aria-label="Notifications"]),
-      a[role="link"]:has(svg[aria-label*="Notification" i]) {
+      /* Only match notifications tab - exclude messages tab which contains "Direct" */
+      a[role="link"][href="#"]:has(svg[aria-label="Notifications"]):not([aria-label*="Direct"]):not([aria-label*="direct"]):not([aria-label*="DIRECT"]),
+      a[role="link"][aria-label="Notifications"]:not([aria-label*="Direct"]):not([aria-label*="direct"]):not([aria-label*="DIRECT"]),
+      a[role="link"]:has(svg[aria-label="Notifications"]):not([aria-label*="Direct"]):not([aria-label*="direct"]):not([aria-label*="DIRECT"]) {
         display: none !important;
       }
     `);
@@ -213,16 +211,6 @@ function injectEarlyHideCSS(disabledTabsSet) {
       a[role="link"]:has(svg[aria-label="New post"]),
       a[role="link"]:has(svg[aria-label*="New post" i]),
       a[role="link"]:has(svg[aria-label*="Create" i]) {
-        display: none !important;
-      }
-    `);
-  }
-
-  if (disabledTabsSet.has("profile")) {
-    cssRules.push(`
-      a[role="link"][href^="/"]:not([href="/"]):not([href="/explore/"]):not([href="/explore"]):not([href="/reels/"]):not([href="/reels"]):has(img[alt*="profile picture" i]),
-      a[role="link"][aria-label="Profile"]:has(img[alt*="profile picture" i]),
-      a[role="link"][aria-label*="Profile" i]:has(img[alt*="profile picture" i]) {
         display: none !important;
       }
     `);
@@ -249,7 +237,7 @@ function injectEarlyHideCSS(disabledTabsSet) {
     const style = document.createElement("style");
     style.id = "instafn-tab-disabler-early";
     style.textContent = cssRules.join("\n");
-    
+
     // Inject immediately - try head first, then documentElement, then body
     const injectStyle = () => {
       const target = document.head || document.documentElement || document.body;
@@ -267,7 +255,9 @@ function injectEarlyHideCSS(disabledTabsSet) {
     if (!injectStyle()) {
       // If injection failed, try again when DOM is ready
       if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", injectStyle, { once: true });
+        document.addEventListener("DOMContentLoaded", injectStyle, {
+          once: true,
+        });
         // Also try immediately in case documentElement exists
         setTimeout(injectStyle, 0);
       } else {

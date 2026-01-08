@@ -5,6 +5,19 @@
 
 import { injectScript } from "../../utils/scriptInjector.js";
 
+// Store original functions
+let originalFetch = null;
+let originalXHROpen = null;
+let originalXHRSend = null;
+let originalWsHookBefore = null;
+let originalWsHookAfter = null;
+let isIntercepted = false;
+
+// Check if feature is enabled (checks both the flag and the window object)
+const checkEnabled = () => {
+  return window.Instafn?.blockTypingReceipts === true;
+};
+
 export function initTypingReceiptBlocker(enabled) {
   // Send flag to page context via postMessage (avoids CSP issues)
   function setFlag() {
@@ -30,14 +43,39 @@ export function initTypingReceiptBlocker(enabled) {
     }
   );
 
-  // Also intercept fetch/XHR requests (fallback if WebSocket interceptor isn't enough)
-  interceptTypingReceipts();
+  // Set up interceptors (they check the enabled flag dynamically)
+  // Only set up once, then they check the flag on each call
+  if (!isIntercepted) {
+    interceptTypingReceipts();
+  }
 }
 
 function interceptTypingReceipts() {
+  if (isIntercepted) {
+    return; // Already intercepted
+  }
+
+  // Store original functions
+  originalFetch = window.fetch;
+  originalXHROpen = XMLHttpRequest.prototype.open;
+  originalXHRSend = XMLHttpRequest.prototype.send;
+
   const setupWsHook = () => {
     if (typeof window.wsHook !== "undefined") {
+      // Store original if not already stored
+      if (originalWsHookBefore === null) {
+        originalWsHookBefore = window.wsHook.before;
+      }
+      if (originalWsHookAfter === null) {
+        originalWsHookAfter = window.wsHook.after;
+      }
+
       window.wsHook.before = (data, url) => {
+        // Check if enabled before processing
+        if (!checkEnabled()) {
+          return originalWsHookBefore ? originalWsHookBefore(data, url) : data;
+        }
+
         try {
           if (
             url &&
@@ -56,17 +94,23 @@ function interceptTypingReceipts() {
         } catch (error) {
           console.log("Instafn: Error processing typing receipt:", error);
         }
-        return data;
+        return originalWsHookBefore ? originalWsHookBefore(data, url) : data;
       };
-      window.wsHook.after = (event) => event;
+      window.wsHook.after = (event) => {
+        return originalWsHookAfter ? originalWsHookAfter(event) : event;
+      };
     } else {
       setTimeout(setupWsHook, 100);
     }
   };
   setupWsHook();
 
-  const originalFetch = window.fetch;
   window.fetch = function(...args) {
+    // Check if enabled before processing
+    if (!checkEnabled()) {
+      return originalFetch.apply(this, args);
+    }
+
     const [url, options] = args;
     if (
       typeof url === "string" &&
@@ -119,13 +163,16 @@ function interceptTypingReceipts() {
     return originalFetch.apply(this, args);
   };
 
-  const originalXHROpen = XMLHttpRequest.prototype.open;
-  const originalXHRSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.open = function(method, url, ...args) {
     this._url = url;
     return originalXHROpen.apply(this, [method, url, ...args]);
   };
   XMLHttpRequest.prototype.send = function(data) {
+    // Check if enabled before processing
+    if (!checkEnabled()) {
+      return originalXHRSend.call(this, data);
+    }
+
     if (this._url && this._url.includes("edge-chat.instagram.com/chat")) {
       if (data && typeof data === "string") {
         try {
@@ -147,4 +194,6 @@ function interceptTypingReceipts() {
     }
     return originalXHRSend.call(this, data);
   };
+
+  isIntercepted = true;
 }

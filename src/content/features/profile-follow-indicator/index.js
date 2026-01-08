@@ -59,16 +59,52 @@ function isPostOrReelPage() {
 function extractFollowStatus(data) {
   if (!isEnabled) return;
   try {
-    const username = data?.data?.user?.username;
-    const followedBy = data?.data?.user?.friendship_status?.followed_by;
+    // Handle different GraphQL response formats
+    // Format 1: { data: { user: { ... } } }
+    // Format 2: { data: { xdt_api__v1__feed__user_timeline_graphql_connection: { edges: [{ node: { user: { ... } } }] } } }
+    // Format 3: Wrapped in additional layers
+    
+    let user = null;
+    let username = null;
+    let followedBy = undefined;
+    
+    // Try direct path first
+    if (data?.data?.user) {
+      user = data.data.user;
+    }
+    // Try nested in edges (common in Instagram responses)
+    else if (data?.data?.xdt_api__v1__feed__user_timeline_graphql_connection?.edges?.[0]?.node?.user) {
+      user = data.data.xdt_api__v1__feed__user_timeline_graphql_connection.edges[0].node.user;
+    }
+    // Try other common paths
+    else if (data?.data?.user_dict) {
+      // Sometimes user data is in user_dict
+      const userDict = data.data.user_dict;
+      if (typeof userDict === 'object' && Object.keys(userDict).length > 0) {
+        // Get first user in dict
+        const firstKey = Object.keys(userDict)[0];
+        user = userDict[firstKey];
+      }
+    }
+    
+    if (user) {
+      username = user.username || user.user?.username;
+      followedBy = user.friendship_status?.followed_by ?? 
+                   user.user?.friendship_status?.followed_by ??
+                   user.followed_by;
+    }
+    
     if (username && followedBy !== undefined) {
+      console.log(`[Instafn Follow Indicator] Found follow status for ${username}: ${followedBy}`);
       followStatusCache.set(username, followedBy);
       if (getProfileUsernameFromPath() === username) {
         setTimeout(() => injectFollowIndicator(), 100);
       }
+    } else if (username) {
+      console.log(`[Instafn Follow Indicator] Found username ${username} but no follow status`);
     }
   } catch (e) {
-    console.error("[Instafn] Error extracting follow status:", e);
+    console.error("[Instafn] Error extracting follow status:", e, data);
   }
 }
 
@@ -86,13 +122,31 @@ function setupGraphQLMessageListener() {
       event.data.type === "graphql-response" &&
       event.data.isProfileRequest
     ) {
+      console.log("[Instafn Follow Indicator] Received GraphQL profile response");
       try {
-        extractFollowStatus(JSON.parse(event.data.data));
+        // Try parsing as JSON first
+        let parsedData = event.data.data;
+        if (typeof parsedData === 'string') {
+          parsedData = JSON.parse(parsedData);
+        }
+        extractFollowStatus(parsedData);
       } catch (e) {
+        console.log("[Instafn Follow Indicator] Failed to parse as JSON, trying regex extraction");
         try {
+          // Try to extract JSON from string that might contain other text
           const match = event.data.data.match(/\{[\s\S]*"data"[\s\S]*\}/);
-          if (match) extractFollowStatus(JSON.parse(match[0]));
-        } catch {
+          if (match) {
+            extractFollowStatus(JSON.parse(match[0]));
+          } else {
+            console.warn("[Instafn Follow Indicator] Could not extract JSON from response");
+            // Still try to inject indicator after delay in case data comes later
+            if (isEnabled) {
+              setTimeout(() => injectFollowIndicator(), 2000);
+            }
+          }
+        } catch (parseErr) {
+          console.error("[Instafn Follow Indicator] Error parsing GraphQL response:", parseErr);
+          // Still try to inject indicator after delay
           if (isEnabled) {
             setTimeout(() => injectFollowIndicator(), 2000);
           }

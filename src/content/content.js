@@ -34,11 +34,8 @@ import {
   initTabDisabler,
   initTabDisablerEarly,
 } from "./features/tab-disabler/index.js";
-import {
-  initDMPopupHider,
-  enableDMDebug,
-} from "./features/dm-popup-hider/index.js";
-import { injectBrandingStyles } from "./features/branding/index.js";
+import { enableDMDebug } from "./features/dm-popup-hider/index.js";
+import { initBranding } from "./features/branding/index.js";
 import { initDMThemeDebug } from "./features/dm-theme-debug/index.js";
 import { initManualStorySeenButton } from "./features/story-blocking/manualSeenButton.js";
 import { initExactTimeDisplay } from "./features/exact-time-display/index.js";
@@ -79,6 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
   chrome.storage.sync.get(
     {
       blockStorySeen: false,
+      enableManualMarkAsSeen: false,
       confirmLike: false,
       confirmComment: false,
       confirmCall: false,
@@ -99,9 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
       disableTabMessages: false,
       disableTabNotifications: false,
       disableTabCreate: false,
-      disableTabProfile: false,
       disableTabMoreFromMeta: false,
-      hideDMPopup: false,
       enableMessageEditShortcut: false,
       enableMessageReplyShortcut: false,
       enableMessageDoubleTapLike: false,
@@ -120,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (settings.confirmStoryQuickReactions) interceptStoryQuickReactions();
       if (settings.confirmStoryReplies) interceptStoryReplies();
       if (settings.blockTypingReceipts) initTypingReceiptBlocker(true);
-      if (settings.blockStorySeen) initManualStorySeenButton(true);
+      if (settings.enableManualMarkAsSeen) initManualStorySeenButton(true);
 
       // Initialize video scrubber
       initVideoScrubber(settings.enableVideoScrubber);
@@ -135,9 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Initialize tab disabler
       initTabDisabler(settings);
-
-      // Initialize DM popup hider
-      initDMPopupHider(settings);
 
       // Initialize DM theme debug overlay
       initDMThemeDebug();
@@ -206,8 +199,8 @@ document.addEventListener("DOMContentLoaded", () => {
   );
 });
 
-// Inject branding styles immediately (always enabled for branding)
-injectBrandingStyles();
+// Initialize branding (always enabled)
+initBranding();
 
 // Inject story blocking script only if feature is enabled
 chrome.storage.sync.get({ blockStorySeen: false }, (settings) => {
@@ -224,6 +217,22 @@ chrome.storage.sync.get({ enableMessageLogger: false }, (settings) => {
     injectScript("content/features/message-logger/graphql-sniffer.js");
   }
 });
+
+// Inject GraphQL sniffer if follow indicator is enabled (it needs GraphQL interception)
+// Check both message logger and follow indicator settings
+chrome.storage.sync.get(
+  { enableMessageLogger: false, enableProfileFollowIndicator: false },
+  (settings) => {
+    if (
+      settings.enableProfileFollowIndicator &&
+      !settings.enableMessageLogger
+    ) {
+      // Only inject GraphQL sniffer if follow indicator is enabled but message logger is not
+      // (if message logger is enabled, it's already injected above)
+      injectScript("content/features/message-logger/graphql-sniffer.js");
+    }
+  }
+);
 
 // Initialize typing receipt blocker early (before DOMContentLoaded)
 // This needs to happen early to catch WebSocket connections
@@ -264,7 +273,6 @@ chrome.storage.sync.get(
     disableTabMessages: false,
     disableTabNotifications: false,
     disableTabCreate: false,
-    disableTabProfile: false,
     disableTabMoreFromMeta: false,
   },
   (settings) => {
@@ -338,10 +346,10 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     if (changes.blockStorySeen.newValue) {
       // Inject story blocking script if enabling
       injectScript("content/features/story-blocking/storyblocking.js");
-      initManualStorySeenButton(true);
-    } else {
-      initManualStorySeenButton(false);
     }
+  }
+  if (namespace === "sync" && changes.enableManualMarkAsSeen) {
+    initManualStorySeenButton(changes.enableManualMarkAsSeen.newValue);
   }
   if (namespace === "sync" && changes.blockTypingReceipts) {
     initTypingReceiptBlocker(changes.blockTypingReceipts.newValue);
@@ -377,7 +385,6 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
       "disableTabMessages",
       "disableTabNotifications",
       "disableTabCreate",
-      "disableTabProfile",
       "disableTabMoreFromMeta",
     ];
     if (tabDisablerKeys.some((key) => key in changes)) {
@@ -389,7 +396,6 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
           disableTabMessages: false,
           disableTabNotifications: false,
           disableTabCreate: false,
-          disableTabProfile: false,
           disableTabMoreFromMeta: false,
         },
         (settings) => {
@@ -397,12 +403,6 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
           initTabDisabler(settings);
         }
       );
-    }
-    // Handle DM popup hider settings changes
-    if (changes.hideDMPopup) {
-      chrome.storage.sync.get({ hideDMPopup: false }, (settings) => {
-        initDMPopupHider(settings);
-      });
     }
     // Handle message logger settings changes
     if (changes.enableMessageLogger) {

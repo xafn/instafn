@@ -95,11 +95,6 @@ function createImageModal(imageSrc, imageAlt) {
   overlay.appendChild(imgEl);
   overlay.appendChild(closeBtn);
   document.body.appendChild(overlay);
-  setTimeout(() => {
-    try {
-      overlay.focus();
-    } catch (e) {}
-  }, 0);
 }
 
 // Helper function to get actual image dimensions
@@ -194,6 +189,10 @@ function handlePointerDown(e) {
   )
     return;
   if (!isProfilePic && !isHighlight) return;
+
+  // Prevent default behavior to avoid scrolling
+  e.preventDefault();
+  e.stopPropagation();
 
   startX = e.clientX;
   startY = e.clientY;

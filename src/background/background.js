@@ -1,6 +1,7 @@
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   const defaults = {
     blockStorySeen: false,
+    enableManualMarkAsSeen: false,
     confirmLike: false,
     confirmComment: false,
     confirmCall: false,
@@ -21,9 +22,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     disableTabMessages: false,
     disableTabNotifications: false,
     disableTabCreate: false,
-    disableTabProfile: false,
     disableTabMoreFromMeta: false,
-    hideDMPopup: false,
     enableMessageEditShortcut: false,
     enableMessageReplyShortcut: false,
     enableMessageDoubleTapLike: false,
@@ -34,11 +33,18 @@ chrome.runtime.onInstalled.addListener(async () => {
     enableProfileComments: false,
   };
 
-  chrome.storage.sync.get(defaults, (current) => {
+  chrome.storage.sync.get([...Object.keys(defaults), "welcomeModalShown"], (current) => {
     const toSet = {};
     for (const [k, v] of Object.entries(defaults)) {
       if (!(k in current)) toSet[k] = v;
     }
     if (Object.keys(toSet).length) chrome.storage.sync.set(toSet);
+    
+    // Open welcome page on first install
+    if (details.reason === "install") {
+      chrome.tabs.create({
+        url: chrome.runtime.getURL("settings/settings.html")
+      });
+    }
   });
 });

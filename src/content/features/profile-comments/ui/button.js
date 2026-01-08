@@ -8,6 +8,43 @@ let retryCount = 0;
 const MAX_RETRIES = 5;
 
 /**
+ * Check if we're on an actual profile page (not reels, posts, stories, etc.)
+ */
+function isProfilePage() {
+  const pathname = location.pathname;
+  // Exclude common non-profile paths
+  const excludedPaths = [
+    "/reels/",
+    "/p/",
+    "/stories/",
+    "/explore/",
+    "/direct/",
+    "/accounts/",
+    "/emails/",
+    "/help/",
+    "/about/",
+    "/developer/",
+    "/legal/",
+    "/privacy/",
+    "/terms/",
+    "/blog/",
+    "/api/",
+  ];
+
+  // Check if path starts with any excluded path
+  for (const excluded of excludedPaths) {
+    if (pathname.startsWith(excluded)) {
+      return false;
+    }
+  }
+
+  // Profile pages are typically just /username/ or /username
+  // They should match the pattern: /username/ (with optional trailing slash)
+  const profilePattern = /^\/[^\/]+\/?$/;
+  return profilePattern.test(pathname);
+}
+
+/**
  * Create the Comments button wrapper
  * Clones the structure of a reference button to match Instagram's styling
  */
@@ -40,7 +77,8 @@ function createCommentsButton(referenceWrapper) {
 /**
  * Find a reference button that exists on all profile types
  * Returns: { button, wrapper, container } or null
- * Works for: own profile (Edit Profile), followed profiles (Message/Following), unfollowed profiles (Follow)
+ * Works for: own profile (Edit Profile), followed profiles (Message/Following),
+ * unfollowed profiles (Follow), requested profiles (Requested)
  */
 export function findReferenceButton() {
   // Try to find any of these buttons in order of preference:
@@ -53,6 +91,7 @@ export function findReferenceButton() {
     "Message",
     "Follow Back", // Profiles that follow you back
     "Follow",
+    "Requested", // When you've sent a follow request to a private account
     "View archive", // On own profile, inject after this
     "Edit profile",
     "Edit Profile",
@@ -169,6 +208,15 @@ export function findReferenceButton() {
 export function injectCommentsButton(onClickHandler) {
   if (!isEnabled) return;
   if (isInjecting) return;
+
+  // Only inject on actual profile pages, not on reels, posts, stories, etc.
+  if (!isProfilePage()) {
+    const existing = document.getElementById(BUTTON_ID);
+    if (existing) existing.remove();
+    currentUsername = null;
+    retryCount = 0;
+    return;
+  }
 
   const username = getProfileUsernameFromPath();
   if (!username) {

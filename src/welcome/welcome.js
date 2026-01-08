@@ -32,73 +32,72 @@ const DEFAULTS = {
   enableProfileComments: false,
 };
 
-const SECTION_TITLES = {
-  privacy: "Privacy & Receipts",
-  confirmations: "Action Confirmations",
-  profile: "Profile Features",
-  media: "Video & Media",
-  messages: "Messages",
-  navigation: "Navigation",
-  display: "Display",
-  about: "About",
-};
-
 document.addEventListener("DOMContentLoaded", () => {
-  const homepageView = document.getElementById("homepageView");
-  const sectionView = document.getElementById("sectionView");
-  const backButton = document.getElementById("backButton");
-  const sectionTitle = document.getElementById("sectionTitle");
-  const settingsItems = document.querySelectorAll(".settings-item");
+  const sidebarItems = document.querySelectorAll(".sidebar-item");
   const sectionContents = document.querySelectorAll(".section-content");
   const saveButton = document.getElementById("save");
-  const openSettingsButton = document.getElementById("openSettingsButton");
-  const openSettingsButtonSection = document.getElementById("openSettingsButtonSection");
+  const splashScreen = document.getElementById("splashScreen");
+  const settingsPage = document.getElementById("settingsPage");
+  const continueButton = document.getElementById("continueButton");
   
   let originalSettings = {};
 
-  // Open settings in new tab
-  function openSettingsInNewTab() {
-    chrome.tabs.create({
-      url: chrome.runtime.getURL("settings/settings.html")
+  // Show splash screen on first visit
+  chrome.storage.sync.get(["splashScreenShown"], (result) => {
+    if (!result.splashScreenShown) {
+      splashScreen.classList.remove("hidden");
+      settingsPage.classList.add("hidden");
+    } else {
+      splashScreen.classList.add("hidden");
+      settingsPage.classList.remove("hidden");
+    }
+  });
+
+  // Continue button handler
+  if (continueButton) {
+    continueButton.addEventListener("click", () => {
+      splashScreen.classList.add("hidden");
+      settingsPage.classList.remove("hidden");
+      chrome.storage.sync.set({ splashScreenShown: true });
     });
   }
 
-  if (openSettingsButton) {
-    openSettingsButton.addEventListener("click", openSettingsInNewTab);
-  }
-  if (openSettingsButtonSection) {
-    openSettingsButtonSection.addEventListener("click", openSettingsInNewTab);
+  // Load version number
+  const versionElement = document.getElementById("versionNumber");
+  if (versionElement) {
+    try {
+      const manifest = chrome.runtime.getManifest();
+      versionElement.textContent = manifest.version || "Unknown";
+    } catch (e) {
+      versionElement.textContent = "Unknown";
+    }
   }
 
-  // Navigate to section
-  settingsItems.forEach((item) => {
+  // Sidebar navigation
+  sidebarItems.forEach((item) => {
     item.addEventListener("click", () => {
       const section = item.getAttribute("data-section");
-      showSection(section);
+      
+      // Update active sidebar item
+      sidebarItems.forEach((i) => i.classList.remove("active"));
+      item.classList.add("active");
+      
+      // Show correct section content
+      sectionContents.forEach((content) => {
+        content.classList.remove("active");
+        if (content.getAttribute("data-section") === section) {
+          content.classList.add("active");
+        }
+      });
     });
   });
 
-  // Back button handler
-  backButton.addEventListener("click", () => {
-    showHomepage();
-  });
-
-  function showHomepage() {
-    homepageView.classList.add("active");
-    sectionView.classList.remove("active");
-  }
-
-  function showSection(section) {
-    homepageView.classList.remove("active");
-    sectionView.classList.add("active");
-
-    // Update title
-    sectionTitle.textContent = SECTION_TITLES[section] || "Settings";
-
-    // Show correct section content
+  // Set default active section
+  const firstSidebarItem = sidebarItems[0];
+  if (firstSidebarItem) {
+    const firstSection = firstSidebarItem.getAttribute("data-section");
     sectionContents.forEach((content) => {
-      content.classList.remove("active");
-      if (content.getAttribute("data-section") === section) {
+      if (content.getAttribute("data-section") === firstSection) {
         content.classList.add("active");
       }
     });
@@ -162,8 +161,12 @@ document.addEventListener("DOMContentLoaded", () => {
     checkForChanges();
   }
 
-  blockStorySeenCheckbox.addEventListener("change", updateNestedSettingState);
-  showExactTimeCheckbox.addEventListener("change", updateTimeFormatState);
+  if (blockStorySeenCheckbox) {
+    blockStorySeenCheckbox.addEventListener("change", updateNestedSettingState);
+  }
+  if (showExactTimeCheckbox) {
+    showExactTimeCheckbox.addEventListener("change", updateTimeFormatState);
+  }
 
   // Load saved settings
   chrome.storage.sync.get(DEFAULTS, (cfg) => {
@@ -183,17 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
     updateNestedSettingState();
     updateTimeFormatState();
     checkForChanges();
-
-    // Load version number
-    const versionElement = document.getElementById("versionNumber");
-    if (versionElement) {
-      try {
-        const manifest = chrome.runtime.getManifest();
-        versionElement.textContent = manifest.version || "Unknown";
-      } catch (e) {
-        versionElement.textContent = "Unknown";
-      }
-    }
   });
 
   // Listen for all changes
@@ -242,10 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         }
       });
-
-      setTimeout(() => {
-        window.close();
-      }, 100);
     });
   });
 });
+

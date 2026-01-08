@@ -7,161 +7,860 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <header>
-      <h1>Instafn</h1>
-    </header>
-    <main>
-      <section>
-        <h2>Privacy & Receipts</h2>
-        <label
-          ><input type="checkbox" id="blockStorySeen" /> Block Story Seen</label
+    <!-- Homepage View -->
+    <div id="homepageView" class="view active">
+      <header>
+        <h1>Instafn</h1>
+        <button
+          class="open-settings-button"
+          id="openSettingsButton"
+          aria-label="Open Settings in New Tab"
+          title="Open Settings in New Tab"
         >
-        <label
-          ><input type="checkbox" id="blockTypingReceipts" /> Block Typing Receipts</label
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+            />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+        </button>
+      </header>
+      <main>
+        <div class="settings-list">
+          <div class="settings-item" data-section="profile">
+            <div class="settings-item-content">
+              <div class="settings-item-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+              <span class="settings-item-title">Profile Features</span>
+            </div>
+            <svg
+              class="settings-item-arrow"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+
+          <div class="settings-item" data-section="confirmations">
+            <div class="settings-item-content">
+              <div class="settings-item-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+              <span class="settings-item-title">Action Confirmations</span>
+            </div>
+            <svg
+              class="settings-item-arrow"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+
+          <div class="settings-item" data-section="privacy">
+            <div class="settings-item-content">
+              <div class="settings-item-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <span class="settings-item-title">Privacy & Receipts</span>
+            </div>
+            <svg
+              class="settings-item-arrow"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+
+          <div class="settings-item" data-section="messages">
+            <div class="settings-item-content">
+              <div class="settings-item-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                  />
+                </svg>
+              </div>
+              <span class="settings-item-title">Messages</span>
+            </div>
+            <svg
+              class="settings-item-arrow"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+
+          <div class="settings-item" data-section="media">
+            <div class="settings-item-content">
+              <div class="settings-item-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+              </div>
+              <span class="settings-item-title">Video & Media</span>
+            </div>
+            <svg
+              class="settings-item-arrow"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+
+          <div class="settings-item" data-section="navigation">
+            <div class="settings-item-content">
+              <div class="settings-item-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="5" y="2" width="14" height="20" rx="7" />
+                  <path d="M12 6v8" />
+                </svg>
+              </div>
+              <span class="settings-item-title">Navigation</span>
+            </div>
+            <svg
+              class="settings-item-arrow"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+
+          <div class="settings-item" data-section="display">
+            <div class="settings-item-content">
+              <div class="settings-item-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+              </div>
+              <span class="settings-item-title">Display</span>
+            </div>
+            <svg
+              class="settings-item-arrow"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+
+          <div class="settings-item" data-section="about">
+            <div class="settings-item-content">
+              <div class="settings-item-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              </div>
+              <span class="settings-item-title">About</span>
+            </div>
+            <svg
+              class="settings-item-arrow"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Section Views -->
+    <div id="sectionView" class="view">
+      <header>
+        <button class="back-button" id="backButton" aria-label="Back">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 id="sectionTitle">Settings</h1>
+        <button
+          class="open-settings-button"
+          id="openSettingsButtonSection"
+          aria-label="Open Settings in New Tab"
+          title="Open Settings in New Tab"
         >
-      </section>
-      <section>
-        <h2>Action Confirmations</h2>
-        <label><input type="checkbox" id="confirmLike" /> Confirm Likes</label>
-        <label
-          ><input type="checkbox" id="confirmComment" /> Confirm Comments</label
-        >
-        <label><input type="checkbox" id="confirmCall" /> Confirm Calls</label>
-        <label
-          ><input type="checkbox" id="confirmFollow" /> Confirm Follows</label
-        >
-        <label
-          ><input type="checkbox" id="confirmReposts" /> Confirm Reposts</label
-        >
-        <label
-          ><input type="checkbox" id="confirmStoryQuickReactions" /> Confirm
-          Story Quick Reactions</label
-        >
-        <label
-          ><input type="checkbox" id="confirmStoryReplies" /> Confirm Story
-          Replies</label
-        >
-      </section>
-      <section>
-        <h2>Profile Features</h2>
-        <label
-          ><input type="checkbox" id="activateFollowAnalyzer" /> Activate Follow
-          Analyzer Button</label
-        >
-        <label>
-          <input type="checkbox" id="enableProfilePicPopup" />
-          Enable Profile Picture Popup (long press)
-        </label>
-        <label>
-          <input type="checkbox" id="enableHighlightPopup" />
-          Enable Highlight Popup (long press)
-        </label>
-        <label>
-          <input type="checkbox" id="enableProfileFollowIndicator" />
-          Show Follow Status Indicator
-        </label>
-      </section>
-      <section>
-        <h2>Video & Media</h2>
-        <label
-          ><input type="checkbox" id="enableVideoScrubber" /> Enable Video
-          Scrubber (experimental)</label
-        >
-      </section>
-      <section>
-        <h2>Messages</h2>
-        <label>
-          <input type="checkbox" id="hideDMPopup" />
-          Hide DM Popup Menu (when clicking home from DMs)
-        </label>
-        <label>
-          <input type="checkbox" id="enableMessageEditShortcut" />
-          Enable Quick Edit (Ctrl/Cmd+Shift+↑ to edit your last message)
-        </label>
-        <label>
-          <input type="checkbox" id="enableMessageReplyShortcut" />
-          Enable Quick Reply (Ctrl/Cmd+↑ to reply, press multiple times to navigate up)
-        </label>
-        <label>
-          <input type="checkbox" id="enableMessageDoubleTapLike" />
-          Enable Double-Tap to Like Messages
-        </label>
-        <label>
-          <input type="checkbox" id="enableMessageLogger" />
-          Enable Message Logger (track deleted messages)
-        </label>
-      </section>
-      <section>
-        <h2>Navigation</h2>
-        <label>
-          <input type="checkbox" id="hideRecentSearches" />
-          Hide Recent Searches
-        </label>
-        <label>
-          <input type="checkbox" id="disableTabSearch" />
-          Disable Search Tab
-        </label>
-        <label>
-          <input type="checkbox" id="disableTabExplore" />
-          Disable Explore Tab
-        </label>
-        <label>
-          <input type="checkbox" id="disableTabReels" />
-          Disable Reels Tab
-        </label>
-        <label>
-          <input type="checkbox" id="disableTabMessages" />
-          Disable Messages Tab
-        </label>
-        <label>
-          <input type="checkbox" id="disableTabNotifications" />
-          Disable Notifications Tab
-        </label>
-        <label>
-          <input type="checkbox" id="disableTabCreate" />
-          Disable Create Tab
-        </label>
-        <label>
-          <input type="checkbox" id="disableTabProfile" />
-          Disable Profile Tab
-        </label>
-        <label>
-          <input type="checkbox" id="disableTabMoreFromMeta" />
-          Disable Also from Meta Tab
-        </label>
-      </section>
-      <section>
-        <h2>Display</h2>
-        <label>
-          <input type="checkbox" id="showExactTime" />
-          Show Exact Time on Dates
-        </label>
-        <label>
-          <input type="checkbox" id="enableCallTimer" />
-          Show Elapsed Time in Calls
-        </label>
-        <label style="display: flex; flex-direction: column; margin-top: 8px;">
-          <span style="margin-bottom: 4px;">Time Format:</span>
-          <select id="timeFormat" style="padding: 4px; margin-top: 4px;">
-            <option value="default">Jan 1, 2026, 6:14 AM (Default)</option>
-            <option value="full">January 1, 2026, 6:14:52 AM (Full)</option>
-            <option value="short">1/1/2026, 6:14 AM (Short)</option>
-            <option value="iso">2026-01-01 06:14:52 (ISO)</option>
-            <option value="us">01/01/2026, 6:14 AM (US)</option>
-            <option value="european">01/01/2026, 06:14 (European)</option>
-            <option value="date-only">Jan 1, 2026 (Date Only)</option>
-            <option value="time-only">6:14 AM (Time Only)</option>
-            <option value="24h">Jan 1, 2026, 06:14 (24-hour)</option>
-            <option value="24h-full">January 1, 2026, 06:14:52 (24-hour Full)</option>
-            <option value="relative-precise">2d (Jan 1, 2026, 6:14 AM) (Relative + Exact)</option>
-            <option value="compact">1 Jan 2026, 6:14 AM (Compact)</option>
-            <option value="rfc2822">Mon, 01 Jan 2026 06:14:52 +0000 (RFC 2822)</option>
-          </select>
-        </label>
-      </section>
-    </main>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+            />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+        </button>
+      </header>
+      <main>
+        <!-- Privacy & Receipts -->
+        <div class="section-content" data-section="privacy">
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Block Story Seen Receipts</span>
+                <span class="setting-description"
+                  >Prevents automatically marking stories as seen when you view
+                  them.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="blockStorySeen" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-nested" id="nestedStorySeen">
+              <div class="setting">
+                <div class="setting-content">
+                  <div class="setting-info">
+                    <span class="setting-title"
+                      >Manual Mark as Seen Button</span
+                    >
+                    <span class="setting-description"
+                      >Adds a button next the to like button in stories to
+                      manually mark the story as seen.</span
+                    >
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" id="enableManualMarkAsSeen" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Block Typing Receipts</span>
+                <span class="setting-description"
+                  >Blocks typing receipts from being sent to the server in
+                  messages. Warning: This may cause delays in messages being
+                  delivered.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="blockTypingReceipts" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Confirmations -->
+        <div class="section-content" data-section="confirmations">
+          <div class="section-description">
+            Prevent accidental actions by requiring a confirmation before
+            performing them.
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Confirm Likes</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="confirmLike" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Confirm Comments</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="confirmComment" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Confirm Calls</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="confirmCall" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Confirm Follows</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="confirmFollow" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Confirm Reposts</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="confirmReposts" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Confirm Story Quick Reactions</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="confirmStoryQuickReactions" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Confirm Story Replies</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="confirmStoryReplies" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile Features -->
+        <div class="section-content" data-section="profile">
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Show Follow Status Indicator</span>
+                <span class="setting-description"
+                  >Displays whether a user follows you or not on their profile
+                  page.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="enableProfileFollowIndicator" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Profile Comments</span>
+                <span class="setting-description"
+                  >Adds a comment section to profile pages where users can leave
+                  comments. These comments are visible only to those with this
+                  extension installed. Use responsibly.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="enableProfileComments" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Profile Picture Popup</span>
+                <span class="setting-description"
+                  >Long press a profile picture on a user's profile to see an
+                  enlarged view.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="enableProfilePicPopup" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Highlight Popup</span>
+                <span class="setting-description"
+                  >Long press a highlight on a user's profile to see an enlarged
+                  view.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="enableHighlightPopup" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Follow Analyzer</span>
+                <span class="setting-description"
+                  >Adds a button on your profile to analyze your followers and
+                  following. Track who unfollowed you, who you don't follow
+                  back, who you follow back, and more. Warning: Do not use this
+                  if you have 13000+ connections. Use at your own risk.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="activateFollowAnalyzer" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Video & Media -->
+        <div class="section-content" data-section="media">
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Universal Video Scrubber</span>
+                <span class="setting-description"
+                  >Adds a video scrubber to every video without native controls,
+                  including reels, stories, and videos in the feed. Also shows
+                  the current time and duration of the video.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="enableVideoScrubber" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <div class="section-content" data-section="messages">
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Double-Tap to Like Messages</span>
+                <span class="setting-description"
+                  >Double tap a message in direct messages to like it. Works
+                  with a changed default like emoji</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="enableMessageDoubleTapLike" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Quick Reply</span>
+                <span class="setting-description"
+                  >Adds a keyboard shortcut to reply to the last message. Ctrl/⌘
+                  + ↑ to reply to the last message when the textbox is focused
+                  and empty. Press multiple times to navigate up in available
+                  messages.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="enableMessageReplyShortcut" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Quick Edit</span>
+                <span class="setting-description"
+                  >Adds a keyboard shortcut to edit your last message. Ctrl/⌘ +
+                  Shift + ↑ to edit your last message when the textbox is
+                  focused and empty.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="enableMessageEditShortcut" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Message Logger</span>
+                <span class="setting-description"
+                  >Logs deleted messages in the extension. View deleted messages
+                  by clicking the box button in the messages textbox. Only logs
+                  messages when the Instagram website is active.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="enableMessageLogger" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="section-content" data-section="navigation">
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Hide Recent Searches</span>
+                <span class="setting-description"
+                  >Hides the recent searches section in the search UI.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="hideRecentSearches" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Disable Search Tab</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="disableTabSearch" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Disable Explore Tab</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="disableTabExplore" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Disable Reels Tab</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="disableTabReels" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Disable Messages Tab</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="disableTabMessages" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Disable Notifications Tab</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="disableTabNotifications" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Disable Create Tab</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="disableTabCreate" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Disable Also from Meta Tab</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="disableTabMoreFromMeta" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Display -->
+        <div class="section-content" data-section="display">
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Show Elapsed Time in Calls</span>
+                <span class="setting-description"
+                  >Shows how long a call have been active when you are in a
+                  call.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="enableCallTimer" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-content">
+              <div class="setting-info">
+                <span class="setting-title">Show Exact Time on Dates</span>
+                <span class="setting-description"
+                  >Replaces every instance of a date on Instagram with the time
+                  format you select below.</span
+                >
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="showExactTime" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="setting-nested" id="nestedTimeFormat">
+              <div class="setting time-format-wrapper">
+                <div class="setting-content">
+                  <div class="setting-info">
+                    <span class="setting-title">Time Format</span>
+                  </div>
+                </div>
+                <select id="timeFormat" class="time-format-select">
+                  <option value="default"
+                    >Jan 1, 2026, 6:14 AM (Default)</option
+                  >
+                  <option value="full"
+                    >January 1, 2026, 6:14:52 AM (Full)</option
+                  >
+                  <option value="short">1/1/2026, 6:14 AM (Short)</option>
+                  <option value="iso">2026-01-01 06:14:52 (ISO)</option>
+                  <option value="us">01/01/2026, 6:14 AM (US)</option>
+                  <option value="european">01/01/2026, 06:14 (European)</option>
+                  <option value="date-only">Jan 1, 2026 (Date Only)</option>
+                  <option value="time-only">6:14 AM (Time Only)</option>
+                  <option value="24h">Jan 1, 2026, 06:14 (24-hour)</option>
+                  <option value="24h-full"
+                    >January 1, 2026, 06:14:52 (24-hour Full)</option
+                  >
+                  <option value="relative-precise"
+                    >2d (Jan 1, 2026, 6:14 AM) (Relative + Exact)</option
+                  >
+                  <option value="compact">1 Jan 2026, 6:14 AM (Compact)</option>
+                  <option value="rfc2822"
+                    >Mon, 01 Jan 2026 06:14:52 +0000 (RFC 2822)</option
+                  >
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="section-content" data-section="about">
+          <h2 class="section-title">About</h2>
+          <div class="about-content">
+            <div class="about-item">
+              <div class="about-label">Version</div>
+              <div class="about-value" id="versionNumber">Loading...</div>
+            </div>
+            <div class="about-item">
+              <div class="about-label">Support</div>
+              <div class="about-value">
+                <a href="mailto:hey@afn.im" class="about-link">hey@afn.im</a>
+              </div>
+            </div>
+            <div class="about-item">
+              <div class="about-label">Made by afn</div>
+              <div class="about-value">
+                <a
+                  href="https://afn.im"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="about-link"
+                  >afn.im</a
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
     <footer>
-      <button id="save">Save</button>
+      <button id="save" class="save-button">Save Changes</button>
     </footer>
     <script src="popup.js"></script>
   </body>

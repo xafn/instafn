@@ -19,6 +19,43 @@ let urlObserver = null;
 let domObserver = null;
 
 /**
+ * Check if we're on an actual profile page (not reels, posts, stories, etc.)
+ */
+function isProfilePage() {
+  const pathname = location.pathname;
+  // Exclude common non-profile paths
+  const excludedPaths = [
+    "/reels/",
+    "/p/",
+    "/stories/",
+    "/explore/",
+    "/direct/",
+    "/accounts/",
+    "/emails/",
+    "/help/",
+    "/about/",
+    "/developer/",
+    "/legal/",
+    "/privacy/",
+    "/terms/",
+    "/blog/",
+    "/api/",
+  ];
+  
+  // Check if path starts with any excluded path
+  for (const excluded of excludedPaths) {
+    if (pathname.startsWith(excluded)) {
+      return false;
+    }
+  }
+  
+  // Profile pages are typically just /username/ or /username
+  // They should match the pattern: /username/ (with optional trailing slash)
+  const profilePattern = /^\/[^\/]+\/?$/;
+  return profilePattern.test(pathname);
+}
+
+/**
  * Handle comments button click
  */
 function handleCommentsButtonClick() {
@@ -37,10 +74,13 @@ export function initProfileComments() {
   setupGraphQLVerificationListener();
 
   setButtonEnabled(true);
-  injectCommentsButton(handleCommentsButtonClick);
-  setTimeout(() => injectCommentsButton(handleCommentsButtonClick), 500);
-  setTimeout(() => injectCommentsButton(handleCommentsButtonClick), 1500);
-  setTimeout(() => injectCommentsButton(handleCommentsButtonClick), 3000);
+  // Only inject if we're on a profile page
+  if (isProfilePage()) {
+    injectCommentsButton(handleCommentsButtonClick);
+    setTimeout(() => injectCommentsButton(handleCommentsButtonClick), 500);
+    setTimeout(() => injectCommentsButton(handleCommentsButtonClick), 1500);
+    setTimeout(() => injectCommentsButton(handleCommentsButtonClick), 3000);
+  }
 
   let lastUrl = location.href;
   let lastProfileUsername = getProfileUsernameFromPath();
@@ -48,6 +88,15 @@ export function initProfileComments() {
   urlObserver = new MutationObserver(() => {
     if (!isEnabled) return;
     if (location.href !== lastUrl) {
+      // Only proceed if we're on a profile page
+      if (!isProfilePage()) {
+        lastUrl = location.href;
+        const existing = document.getElementById(BUTTON_ID);
+        if (existing) existing.remove();
+        lastProfileUsername = null;
+        return;
+      }
+      
       const newProfileUsername = getProfileUsernameFromPath();
       lastUrl = location.href;
 
@@ -65,6 +114,13 @@ export function initProfileComments() {
 
   domObserver = new MutationObserver(() => {
     if (!isEnabled) return;
+    // Only inject on actual profile pages
+    if (!isProfilePage()) {
+      const existing = document.getElementById(BUTTON_ID);
+      if (existing) existing.remove();
+      return;
+    }
+    
     const username = getProfileUsernameFromPath();
     if (username && !document.getElementById(BUTTON_ID)) {
       // Inject on all profiles

@@ -5,6 +5,8 @@
  * Works by: hover message -> click React button -> click first emoji in menu.
  */
 
+import { showToast } from "../../ui/toast.js";
+
 // Helper: Check if element should be hidden (only dialogs)
 function shouldHideElement(element) {
   if (!element) return false;
@@ -282,6 +284,7 @@ function waitForReactButtonAndClickEmoji(
     } else {
       if (observer) observer.disconnect();
       setTimeout(() => restoreVisibility(hiddenElements), 300);
+      showToast("Failed to like message: React button not found");
     }
   };
 
@@ -319,6 +322,12 @@ function waitForEmojiMenuAndClickFirst(menuObserver, hiddenElements) {
         clickButtonInstantly(emojiButtons[0]);
         setTimeout(() => restoreVisibility(hiddenElements), 300);
         return;
+      } else if (emojiMenu) {
+        // Menu found but no emoji buttons available
+        if (menuObserver) menuObserver.disconnect();
+        setTimeout(() => restoreVisibility(hiddenElements), 300);
+        showToast("Failed to like message: No emoji buttons found");
+        return;
       }
     }
 
@@ -327,6 +336,7 @@ function waitForEmojiMenuAndClickFirst(menuObserver, hiddenElements) {
     } else {
       if (menuObserver) menuObserver.disconnect();
       setTimeout(() => restoreVisibility(hiddenElements), 300);
+      showToast("Failed to like message: Emoji menu not found");
     }
   };
 

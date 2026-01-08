@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Instafn",
     "author": "afn",
-    "version": "0.0.1",
+    "version": "1.0",
     "description": "Extend your Instagram web experience with useful features",
     "icons": {
         "16": "icons/icon.png",
