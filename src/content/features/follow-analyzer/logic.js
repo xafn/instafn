@@ -147,9 +147,24 @@ export async function getCurrentUser() {
   throw new Error("Instafn: Could not determine current user");
 }
 
+// Profile sub-tabs that still render the same profile header (and so should
+// keep reporting the profile's username, e.g. /username/reels/, /username/tagged/).
+const PROFILE_SUBTABS = new Set([
+  "reels",
+  "tagged",
+  "saved",
+  "channel",
+  "feed",
+  "reposts",
+]);
+
 export function getProfileUsernameFromPath() {
-  const m = location.pathname.match(/^\/([^\/]+)\/?$/);
-  return m ? m[1] : null;
+  const segments = location.pathname.split("/").filter(Boolean);
+  if (segments.length === 1) return segments[0];
+  if (segments.length === 2 && PROFILE_SUBTABS.has(segments[1].toLowerCase())) {
+    return segments[0];
+  }
+  return null;
 }
 
 let cachedMe = null;

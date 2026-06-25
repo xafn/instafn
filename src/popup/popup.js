@@ -1,49 +1,23 @@
-const DEFAULTS = {
-  blockStorySeen: false,
-  enableManualMarkAsSeen: false,
-  blockTypingReceipts: false,
-  confirmLike: false,
-  confirmComment: false,
-  confirmCall: false,
-  confirmFollow: false,
-  confirmReposts: false,
-  confirmStoryQuickReactions: false,
-  confirmStoryReplies: false,
-  activateFollowAnalyzer: false,
-  enableVideoScrubber: false,
-  enableProfilePicPopup: false,
-  enableHighlightPopup: false,
-  enableProfileFollowIndicator: false,
-  hideRecentSearches: false,
-  disableTabSearch: false,
-  disableTabExplore: false,
-  disableTabReels: false,
-  disableTabMessages: false,
-  disableTabNotifications: false,
-  disableTabCreate: false,
-  disableTabMoreFromMeta: false,
-  enableMessageEditShortcut: false,
-  enableMessageReplyShortcut: false,
-  enableMessageDoubleTapLike: false,
-  enableMessageLogger: false,
-  showExactTime: false,
-  timeFormat: "default",
-  enableCallTimer: false,
-  enableProfileComments: false,
-};
+// Popup. Mirrors the full settings page exactly — the settings list,
+// dirty-tracking, nested toggles, custom date fields, warning modals and live
+// sync all come from the shared module (settings-shared.js); this file only
+// handles popup-specific chrome: homepage/section navigation, save behavior,
+// and import/export UI.
 
 const SECTION_TITLES = {
+  profile: "Profile",
+  confirmations: "Confirm actions",
   privacy: "Privacy & Receipts",
-  confirmations: "Action Confirmations",
-  profile: "Profile Features",
-  media: "Video & Media",
   messages: "Messages",
-  navigation: "Navigation",
+  media: "Video & Media",
+  downloads: "Downloads",
   display: "Display",
+  backup: "Backup",
   about: "About",
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+  const S = window.InstafnSettings;
   const homepageView = document.getElementById("homepageView");
   const sectionView = document.getElementById("sectionView");
   const backButton = document.getElementById("backButton");
@@ -52,36 +26,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const sectionContents = document.querySelectorAll(".section-content");
   const saveButton = document.getElementById("save");
   const openSettingsButton = document.getElementById("openSettingsButton");
-  const openSettingsButtonSection = document.getElementById("openSettingsButtonSection");
-  
-  let originalSettings = {};
+  const openSettingsButtonSection = document.getElementById(
+    "openSettingsButtonSection"
+  );
 
-  // Open settings in new tab
   function openSettingsInNewTab() {
     chrome.tabs.create({
-      url: chrome.runtime.getURL("settings/settings.html")
+      url: chrome.runtime.getURL("settings/settings.html"),
     });
   }
-
-  if (openSettingsButton) {
+  if (openSettingsButton)
     openSettingsButton.addEventListener("click", openSettingsInNewTab);
-  }
-  if (openSettingsButtonSection) {
+  if (openSettingsButtonSection)
     openSettingsButtonSection.addEventListener("click", openSettingsInNewTab);
-  }
 
-  // Navigate to section
+  // Navigation
   settingsItems.forEach((item) => {
-    item.addEventListener("click", () => {
-      const section = item.getAttribute("data-section");
-      showSection(section);
-    });
+    item.addEventListener("click", () =>
+      showSection(item.getAttribute("data-section"))
+    );
   });
-
-  // Back button handler
-  backButton.addEventListener("click", () => {
-    showHomepage();
-  });
+  backButton.addEventListener("click", showHomepage);
 
   function showHomepage() {
     homepageView.classList.add("active");
@@ -91,161 +56,108 @@ document.addEventListener("DOMContentLoaded", () => {
   function showSection(section) {
     homepageView.classList.remove("active");
     sectionView.classList.add("active");
-
-    // Update title
     sectionTitle.textContent = SECTION_TITLES[section] || "Settings";
-
-    // Show correct section content
     sectionContents.forEach((content) => {
-      content.classList.remove("active");
-      if (content.getAttribute("data-section") === section) {
-        content.classList.add("active");
+      content.classList.toggle(
+        "active",
+        content.getAttribute("data-section") === section
+      );
+    });
+  }
+
+  // Version number
+  const versionElement = document.getElementById("versionNumber");
+  if (versionElement) {
+    try {
+      versionElement.textContent =
+        chrome.runtime.getManifest().version || "Unknown";
+    } catch (e) {
+      versionElement.textContent = "Unknown";
+    }
+  }
+
+  function reloadInstagramTab(cb) {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0] && tabs[0].url && tabs[0].url.includes("instagram.com")) {
+        chrome.tabs.reload(tabs[0].id);
+        if (cb) cb();
+      } else {
+        chrome.tabs.query({ currentWindow: true }, (allTabs) => {
+          const instagramTab = allTabs.find(
+            (tab) => tab.url && tab.url.includes("instagram.com")
+          );
+          if (instagramTab) chrome.tabs.reload(instagramTab.id);
+          if (cb) cb();
+        });
       }
     });
   }
 
-  function checkForChanges() {
-    for (const k of Object.keys(DEFAULTS)) {
-      const el = document.getElementById(k);
-      if (el) {
-        let currentValue;
-        if (el.type === "checkbox") {
-          currentValue = !!el.checked;
-        } else if (el.tagName === "SELECT") {
-          currentValue = el.value;
-        } else {
-          continue;
-        }
-        
-        if (currentValue !== originalSettings[k]) {
-          saveButton.classList.add("active");
+  // Shared form controller. Saving from the popup reloads the Instagram tab
+  // and then closes the popup (its original behavior).
+  const form = S.createForm({
+    onAfterSave: () => {
+      reloadInstagramTab();
+      setTimeout(() => window.close(), 100);
+    },
+  });
+  form.load();
+
+  window.addEventListener("beforeunload", (e) => {
+    if (form.isDirty()) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+
+  if (saveButton) saveButton.addEventListener("click", () => form.save());
+
+  // ---- Import / Export ----
+  const exportBtn = document.getElementById("exportSettings");
+  const importBtn = document.getElementById("importSettings");
+  const importFileInput = document.getElementById("importFileInput");
+
+  if (exportBtn) {
+    exportBtn.addEventListener("click", () => {
+      S.exportToFile(() => S.toastSuccess("Settings exported."));
+    });
+  }
+
+  if (importBtn && importFileInput) {
+    importBtn.addEventListener("click", () => importFileInput.click());
+    importFileInput.addEventListener("change", () => {
+      const file = importFileInput.files && importFileInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        let result;
+        try {
+          result = S.parseImport(JSON.parse(reader.result));
+        } catch (e) {
+          const msg =
+            e instanceof SyntaxError
+              ? "file is not valid JSON."
+              : e.message || "could not import.";
+          S.toastError(`Import failed: ${msg}`);
+          importFileInput.value = "";
           return;
         }
-      }
-    }
-    saveButton.classList.remove("active");
-  }
-
-  // Nested setting management
-  const blockStorySeenCheckbox = document.getElementById("blockStorySeen");
-  const enableManualMarkAsSeenCheckbox = document.getElementById("enableManualMarkAsSeen");
-  const nestedContainer = document.getElementById("nestedStorySeen");
-  const showExactTimeCheckbox = document.getElementById("showExactTime");
-  const nestedTimeFormat = document.getElementById("nestedTimeFormat");
-  const timeFormatSelect = document.getElementById("timeFormat");
-
-  function updateNestedSettingState() {
-    const isBlockStorySeenEnabled = blockStorySeenCheckbox.checked;
-
-    if (isBlockStorySeenEnabled) {
-      nestedContainer.classList.add("enabled");
-      enableManualMarkAsSeenCheckbox.disabled = false;
-    } else {
-      nestedContainer.classList.remove("enabled");
-      enableManualMarkAsSeenCheckbox.disabled = true;
-      enableManualMarkAsSeenCheckbox.checked = false;
-      originalSettings.enableManualMarkAsSeen = false;
-    }
-    checkForChanges();
-  }
-
-  function updateTimeFormatState() {
-    const isShowExactTimeEnabled = showExactTimeCheckbox.checked;
-
-    if (isShowExactTimeEnabled) {
-      nestedTimeFormat.classList.add("enabled");
-      timeFormatSelect.disabled = false;
-    } else {
-      nestedTimeFormat.classList.remove("enabled");
-      timeFormatSelect.disabled = true;
-    }
-    checkForChanges();
-  }
-
-  blockStorySeenCheckbox.addEventListener("change", updateNestedSettingState);
-  showExactTimeCheckbox.addEventListener("change", updateTimeFormatState);
-
-  // Load saved settings
-  chrome.storage.sync.get(DEFAULTS, (cfg) => {
-    for (const [k, v] of Object.entries(DEFAULTS)) {
-      const el = document.getElementById(k);
-      if (el) {
-        if (el.type === "checkbox") {
-          el.checked = !!cfg[k];
-          originalSettings[k] = !!cfg[k];
-        } else if (el.tagName === "SELECT") {
-          el.value = cfg[k] || v;
-          originalSettings[k] = cfg[k] || v;
-        }
-      }
-    }
-
-    updateNestedSettingState();
-    updateTimeFormatState();
-    checkForChanges();
-
-    // Load version number
-    const versionElement = document.getElementById("versionNumber");
-    if (versionElement) {
-      try {
-        const manifest = chrome.runtime.getManifest();
-        versionElement.textContent = manifest.version || "Unknown";
-      } catch (e) {
-        versionElement.textContent = "Unknown";
-      }
-    }
-  });
-
-  // Listen for all changes
-  document.addEventListener("change", checkForChanges);
-  document.addEventListener("click", (e) => {
-    if (e.target.type === "checkbox") {
-      setTimeout(checkForChanges, 0);
-    }
-  });
-
-  // Save button handler
-  saveButton.addEventListener("click", () => {
-    if (!saveButton.classList.contains("active")) return;
-    
-    const newCfg = {};
-    for (const k of Object.keys(DEFAULTS)) {
-      const el = document.getElementById(k);
-      if (el) {
-        if (el.type === "checkbox") {
-          newCfg[k] = !!el.checked;
-        } else if (el.tagName === "SELECT") {
-          newCfg[k] = el.value;
-        }
-      }
-    }
-
-    if (!newCfg.blockStorySeen) {
-      newCfg.enableManualMarkAsSeen = false;
-    }
-
-    chrome.storage.sync.set(newCfg, () => {
-      originalSettings = { ...newCfg };
-      saveButton.classList.remove("active");
-      
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0] && tabs[0].url && tabs[0].url.includes("instagram.com")) {
-          chrome.tabs.reload(tabs[0].id);
-        } else {
-          chrome.tabs.query({ currentWindow: true }, (allTabs) => {
-            const instagramTab = allTabs.find(
-              (tab) => tab.url && tab.url.includes("instagram.com")
-            );
-            if (instagramTab) {
-              chrome.tabs.reload(instagramTab.id);
-            }
-          });
-        }
-      });
-
-      setTimeout(() => {
-        window.close();
-      }, 100);
+        chrome.storage.sync.set(result.newCfg, () => {
+          form.reloadFromStorage();
+          S.toastSuccess(
+            `Imported ${result.applied} setting${
+              result.applied === 1 ? "" : "s"
+            }.`
+          );
+          reloadInstagramTab();
+        });
+        importFileInput.value = "";
+      };
+      reader.onerror = () => {
+        S.toastError("Import failed: could not read file.");
+        importFileInput.value = "";
+      };
+      reader.readAsText(file);
     });
-  });
+  }
 });

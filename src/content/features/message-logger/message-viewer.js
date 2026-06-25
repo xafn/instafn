@@ -5,12 +5,73 @@
  */
 
 import { createModal } from '../../ui/modal.js';
+import { resolveThreadDisplayName } from './thread-name.js';
 
 const ARCHIVE_ICON_PATH =
   '<polyline points="21 8 21 21 3 21 3 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline><rect x="1" y="3" width="22" height="5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></rect><line x1="10" y1="12" x2="14" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>';
 
 let messageViewerButton = null;
 let messageViewerModal = null;
+
+// Timestamp (ms) of the last time the user opened the viewer. Anything deleted
+// after this is considered "unread" and drives the blue dot on the icon.
+const STORAGE_KEY_LAST_SEEN = 'instafn_message_log_last_seen';
+
+function getLastSeen() {
+  const value = parseInt(localStorage.getItem(STORAGE_KEY_LAST_SEEN), 10);
+  return isNaN(value) ? 0 : value;
+}
+
+// Number of deleted messages newer than the last time the viewer was opened.
+function getUnreadCount() {
+  const store = getDeletedMessages();
+  const lastSeen = getLastSeen();
+  let count = 0;
+  for (const msg of store.values()) {
+    const ts = parseInt(msg.deletedAt || msg.timestamp, 10) || 0;
+    if (ts > lastSeen) count++;
+  }
+  return count;
+}
+
+// Record that the user has now seen everything up to this moment.
+function markMessageLogSeen() {
+  try {
+    localStorage.setItem(STORAGE_KEY_LAST_SEEN, String(Date.now()));
+  } catch (e) {
+    // Ignore storage errors — the dot just won't clear, which is harmless.
+  }
+}
+
+// Show/hide a small blue dot in the top-right corner of the viewer button to
+// signal unread (newly deleted) messages.
+function updateUnreadDot(button) {
+  if (!button) return;
+  let dot = button.querySelector('[data-instafn-unread-dot="true"]');
+  const hasUnread = getUnreadCount() > 0;
+
+  if (hasUnread) {
+    if (!dot) {
+      button.style.position = 'relative';
+      dot = document.createElement('span');
+      dot.dataset.instafnUnreadDot = 'true';
+      dot.style.cssText = `
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgb(var(--ig-outgoing-message-bubble));
+        box-shadow: 0 0 0 2px rgb(var(--ig-secondary-background, 0 0 0));
+        pointer-events: none;
+      `;
+      button.appendChild(dot);
+    }
+  } else if (dot) {
+    dot.remove();
+  }
+}
 
 // Get all deleted messages from the store
 function getDeletedMessages() {
@@ -58,6 +119,44 @@ function getSenderUsernameMap() {
   return new Map();
 }
 
+// Get thread participants map from storage
+function getThreadParticipantsMap() {
+  try {
+    const stored = localStorage.getItem("instafn_thread_participants");
+    if (stored) {
+      const mapArray = JSON.parse(stored);
+      const map = new Map();
+      mapArray.forEach(([threadId, fbids]) => {
+        if (Array.isArray(fbids)) {
+          map.set(String(threadId), fbids.map(String));
+        }
+      });
+      return map;
+    }
+  } catch (e) {
+    console.error("[Instafn Message Viewer] Error loading thread participants map:", e);
+  }
+  return new Map();
+}
+
+// Get thread display-name map from storage (header text captured per open thread)
+function getThreadDisplayNameMap() {
+  try {
+    const stored = localStorage.getItem("instafn_thread_display_names");
+    if (stored) {
+      const mapArray = JSON.parse(stored);
+      const map = new Map();
+      mapArray.forEach(([threadId, name]) => {
+        map.set(String(threadId), name);
+      });
+      return map;
+    }
+  } catch (e) {
+    console.error("[Instafn Message Viewer] Error loading thread display-name map:", e);
+  }
+  return new Map();
+}
+
 // Get current user Facebook ID from storage
 function getCurrentUserFbid() {
   try {
@@ -67,100 +166,29 @@ function getCurrentUserFbid() {
   }
 }
 
-// Determine if a thread is a DM or group chat and get display name
-function getThreadDisplayName(msg, threadNameMap, senderUsernameMap, currentUserFbid) {
-  // Try all possible thread ID fields
-  const threadId = msg.threadId || msg.threadFbid || msg.thread;
-  
-  if (!threadId) {
-    return "Unknown";
-  }
-  
-  const threadIdStr = String(threadId);
-  
-  // Try multiple variations of the thread ID to check thread name map
-  const threadIdVariations = [
-    threadIdStr,
-    String(msg.threadId || ""),
-    String(msg.threadFbid || ""),
-    String(msg.thread || "")
-  ].filter(id => id && id !== "undefined" && id !== "null");
-  
-  // Check if we have a thread name entry in the map (try all variations)
-  // If an entry exists (even if empty string), it's a group chat
-  let threadName = null;
-  let hasThreadNameEntry = false;
-  
-  for (const idVar of threadIdVariations) {
-    if (threadNameMap.has(idVar)) {
-      hasThreadNameEntry = true;
-      threadName = threadNameMap.get(idVar);
-      break;
-    }
-  }
-  
-  if (hasThreadNameEntry) {
-    // We have an entry in thread name map - this means it's a group chat
-    if (threadName && threadName.trim() !== "") {
-      // Group chat with a name - show the name
-      return threadName;
-    } else {
-      // Group chat without a name - show the thread ID
-      return threadIdStr;
-    }
-  } else {
-    // No entry in thread name map - this is likely a DM
-    // For DMs, the thread ID is often the other person's Facebook ID
-    // Try to look it up in the sender username map
-    
-    // First, try the thread ID directly as a username lookup
-    const threadIdUsername = senderUsernameMap.get(threadIdStr);
-    if (threadIdUsername) {
-      return `${threadIdUsername}'s DMs`;
-    }
-    
-    // If that doesn't work, try to determine the other user from the sender
-    const senderFbid = String(msg.originalSender || "");
-    
-    if (senderFbid && currentUserFbid) {
-      // Determine the other user's Facebook ID
-      let otherUserFbid = null;
-      
-      if (senderFbid === currentUserFbid) {
-        // Current user sent it - the other person is the thread ID
-        otherUserFbid = threadIdStr;
-      } else {
-        // Other person sent it - use their sender ID
-        otherUserFbid = senderFbid;
-      }
-      
-      // Try to get username from sender map using the other user's ID
-      if (otherUserFbid !== threadIdStr) {
-        const username = senderUsernameMap.get(otherUserFbid);
-        if (username) {
-          return `${username}'s DMs`;
-        }
-      }
-    }
-    
-    // Last resort: show thread ID (not "ID's DMs" since we don't know the username)
-    return threadIdStr;
-  }
-}
-
-// Format timestamp
+// Format timestamp into a compact "Jun 9, 2026 · 12:45 AM" form
 function formatTimestamp(timestamp) {
   if (!timestamp) return 'Unknown';
-  
+
   const ts = parseInt(timestamp);
   if (isNaN(ts)) return 'Invalid';
-  
+
   const date = new Date(ts);
-  return date.toLocaleString();
+  const datePart = date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const timePart = date.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return `${datePart} · ${timePart}`;
 }
 
-// Create the message viewer modal
-async function createMessageViewerModal() {
+// Create the message viewer modal. `unreadSince` is the "last seen" timestamp
+// captured before this open, so rows for messages deleted after it get a dot.
+async function createMessageViewerModal(unreadSince = 0) {
   // Remove existing modal if present
   if (messageViewerModal) {
     messageViewerModal.remove();
@@ -192,7 +220,7 @@ async function createMessageViewerModal() {
     font-family: var(--font-family-system);
     table-layout: auto;
   `;
-  
+
   // Table header
   const thead = document.createElement('thead');
   thead.style.cssText = `
@@ -200,22 +228,24 @@ async function createMessageViewerModal() {
     top: 0;
     background: rgb(var(--ig-elevated-background));
     z-index: 10;
-    border-bottom: 2px solid rgba(var(--ig-primary-text), 0.1);
   `;
-  
+
   const headerRow = document.createElement('tr');
+  headerRow.style.cssText = `
+    border-bottom: 1px solid rgba(var(--ig-primary-text), 0.08);
+  `;
   const headers = ['Message', 'By', 'Thread', 'Timestamp', ''];
   headers.forEach((headerText, index) => {
     const th = document.createElement('th');
     th.textContent = headerText;
     th.style.cssText = `
-      padding: 12px 16px;
+      padding: 10px 16px;
       text-align: ${index === headers.length - 1 ? 'center' : 'left'};
+      vertical-align: middle;
       font-weight: var(--font-weight-system-semibold);
-      font-size: var(--system-13-font-size);
+      font-size: var(--system-12-font-size);
       color: rgb(var(--ig-secondary-text));
-      text-transform: ${headerText ? 'uppercase' : 'none'};
-      letter-spacing: 0.5px;
+      white-space: nowrap;
       font-family: var(--font-family-system);
     `;
     headerRow.appendChild(th);
@@ -230,6 +260,8 @@ async function createMessageViewerModal() {
   // Get thread name map and sender username map from storage
   const threadNameMap = getThreadNameMap();
   const senderUsernameMap = getSenderUsernameMap();
+  const threadParticipantsMap = getThreadParticipantsMap();
+  const threadDisplayNameMap = getThreadDisplayNameMap();
   const currentUserFbid = getCurrentUserFbid();
   
   const messageArray = Array.from(deletedMessages.entries())
@@ -258,7 +290,7 @@ async function createMessageViewerModal() {
     messageArray.forEach((msg, index) => {
       const row = document.createElement('tr');
       row.style.cssText = `
-        border-bottom: 1px solid rgba(var(--ig-primary-text), 0.1);
+        border-bottom: 1px solid rgba(var(--ig-primary-text), 0.06);
         transition: background 0.15s;
       `;
       row.onmouseover = () => {
@@ -267,25 +299,53 @@ async function createMessageViewerModal() {
       row.onmouseout = () => {
         row.style.background = 'transparent';
       };
-      
+
       // Message cell
       const messageCell = document.createElement('td');
-      const messageText = msg.text || '(no text)';
-      messageCell.textContent = messageText;
+      const hasText = Boolean(msg.text);
+      const messageText = msg.text || 'No text';
       messageCell.style.cssText = `
-        padding: 12px 16px;
+        padding: 11px 16px;
         font-size: var(--system-13-font-size);
-        color: rgb(var(--ig-primary-text));
+        line-height: 1.4;
+        color: ${hasText ? 'rgb(var(--ig-primary-text))' : 'rgb(var(--ig-secondary-text))'};
+        font-style: ${hasText ? 'normal' : 'italic'};
         word-break: break-word;
+        vertical-align: top;
         font-family: var(--font-family-system);
         font-weight: var(--font-weight-system-medium);
         min-width: 200px;
         max-width: none;
       `;
-      if (messageText.length > 150) {
-        messageCell.textContent = messageText.substring(0, 150) + '...';
-        messageCell.title = messageText;
+
+      // Lay out an optional unread dot to the left of the text.
+      const messageWrap = document.createElement('div');
+      messageWrap.style.cssText = 'display: flex; align-items: baseline; gap: 8px;';
+
+      const isUnread =
+        (parseInt(msg.deletedAt || msg.timestamp, 10) || 0) > unreadSince;
+      if (isUnread) {
+        const dot = document.createElement('span');
+        dot.style.cssText = `
+          flex: 0 0 auto;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: rgb(var(--ig-outgoing-message-bubble));
+          align-self: center;
+        `;
+        messageWrap.appendChild(dot);
       }
+
+      const textSpan = document.createElement('span');
+      if (messageText.length > 150) {
+        textSpan.textContent = messageText.substring(0, 150) + '...';
+        textSpan.title = messageText;
+      } else {
+        textSpan.textContent = messageText;
+      }
+      messageWrap.appendChild(textSpan);
+      messageCell.appendChild(messageWrap);
       row.appendChild(messageCell);
       
       // By cell - look up username from originalSender
@@ -311,50 +371,40 @@ async function createMessageViewerModal() {
       
       byCell.textContent = deletedByDisplay;
       byCell.style.cssText = `
-        padding: 12px 16px;
+        padding: 11px 16px;
         font-size: var(--system-13-font-size);
+        line-height: 1.4;
         color: rgb(var(--ig-primary-text));
         font-family: var(--font-family-system);
+        vertical-align: top;
         white-space: nowrap;
         min-width: 120px;
       `;
       row.appendChild(byCell);
       
-      // Thread cell - get display name from storage
+      // Thread cell - resolve the display name fresh from storage every time, so
+      // names that were captured after the message was deleted are picked up. We
+      // intentionally ignore msg.threadName: older logs may carry a name from the
+      // buggy DOM-scraping era, and the resolver below is authoritative.
       const threadCell = document.createElement('td');
-      // Always look up from storage to get the most up-to-date name
-      // This handles cases where thread names were added after the message was deleted
-      let displayThreadName = getThreadDisplayName(msg, threadNameMap, senderUsernameMap, currentUserFbid);
-      
-      // Debug logging for troubleshooting
-      const threadId = msg.threadId || msg.threadFbid || msg.thread;
-      if (threadId) {
-        console.log(
-          `[Instafn Message Viewer] 🔍 Thread lookup for ID: ${threadId}, ` +
-          `threadNameMap has entry: ${threadNameMap.has(String(threadId))}, ` +
-          `senderUsernameMap has entry: ${senderUsernameMap.has(String(threadId))}, ` +
-          `result: "${displayThreadName}"`
-        );
-      }
-      
-      // If we got a stored threadName that's not "Unknown", prefer it (it might be more accurate)
-      if (msg.threadName && 
-          msg.threadName !== 'Unknown' && 
-          msg.threadName !== 'Unknown Thread' &&
-          msg.threadName !== 'Messages' &&
-          !msg.threadName.endsWith("'s DMs")) {
-        // Check if the stored name exists in our map (it's a group chat name)
-        if (threadId && threadNameMap.has(String(threadId))) {
-          displayThreadName = msg.threadName;
-        }
-      }
-      
+      const displayThreadName = resolveThreadDisplayName({
+        threadId: msg.threadFbid || msg.threadId || msg.thread,
+        senderFbid: msg.originalSender,
+        participantsMap: threadParticipantsMap,
+        threadNameMap,
+        displayNameMap: threadDisplayNameMap,
+        senderUsernameMap,
+        currentUserFbid,
+      });
+
       threadCell.textContent = displayThreadName;
       threadCell.style.cssText = `
-        padding: 12px 16px;
+        padding: 11px 16px;
         font-size: var(--system-13-font-size);
+        line-height: 1.4;
         color: rgb(var(--ig-primary-text));
         font-family: var(--font-family-system);
+        vertical-align: top;
         min-width: 150px;
       `;
       if (displayThreadName.length > 40) {
@@ -367,27 +417,31 @@ async function createMessageViewerModal() {
       const timestampCell = document.createElement('td');
       timestampCell.textContent = formatTimestamp(msg.timestamp);
       timestampCell.style.cssText = `
-        padding: 12px 16px;
+        padding: 11px 16px;
         font-size: var(--system-13-font-size);
+        line-height: 1.4;
         color: rgb(var(--ig-secondary-text));
         font-family: var(--font-family-system);
+        vertical-align: top;
         white-space: nowrap;
-        min-width: 180px;
+        min-width: 150px;
       `;
       row.appendChild(timestampCell);
-      
+
       // Delete button cell
       const deleteCell = document.createElement('td');
       deleteCell.style.cssText = `
-        padding: 12px 16px;
-        text-align: center;
-        width: 48px;
+        padding: 6px 10px;
+        text-align: right;
+        vertical-align: top;
+        white-space: nowrap;
+        width: 1%;
       `;
       const deleteButton = document.createElement('button');
       deleteButton.innerHTML = `
         <svg aria-label="Delete" fill="currentColor" height="16" role="img" viewBox="0 0 24 24" width="16">
-          <line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="21" x2="3" y1="3" y2="21"></line>
-          <line fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="21" x2="3" y1="21" y2="3"></line>
+          <title>Delete</title>
+          <path d="M20.654 5.717h-3.605V4.039A2.041 2.041 0 0 0 15.01 2H8.99a2.041 2.041 0 0 0-2.039 2.039v1.678H3.347a.75.75 0 1 0 0 1.5h.806v12.744A2.041 2.041 0 0 0 6.191 22h11.618a2.041 2.041 0 0 0 2.038-2.039V7.217h.807a.75.75 0 1 0 0-1.5ZM8.451 4.039a.539.539 0 0 1 .539-.539h6.02a.539.539 0 0 1 .539.539v1.678H8.451Zm9.896 15.922a.539.539 0 0 1-.538.539H6.191a.539.539 0 0 1-.538-.539V7.217h12.694ZM9.872 17.5a.75.75 0 0 0 .75-.75V10.5a.75.75 0 0 0-1.5 0v6.25c0 .414.336.75.75.75Zm4.256 0a.75.75 0 0 0 .75-.75V10.5a.75.75 0 0 0-1.5 0v6.25c0 .414.336.75.75.75Z"></path>
         </svg>
       `;
       deleteButton.setAttribute('aria-label', 'Delete message');
@@ -396,14 +450,14 @@ async function createMessageViewerModal() {
         color: rgb(var(--ig-secondary-text));
         border: none;
         border-radius: 50%;
-        padding: 8px;
+        padding: 6px;
         cursor: pointer;
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
         transition: all 0.2s;
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
       `;
       deleteButton.onmouseover = () => {
         deleteButton.style.background = 'rgba(var(--ig-primary-text), 0.1)';
@@ -429,6 +483,10 @@ async function createMessageViewerModal() {
           }
           // Remove row from table
           row.remove();
+          // Keep the trailing divider off whatever row is now last.
+          if (tbody.lastElementChild) {
+            tbody.lastElementChild.style.borderBottom = 'none';
+          }
           // If no more messages, show empty state
           if (tbody.children.length === 0) {
             const emptyRow = document.createElement('tr');
@@ -452,8 +510,15 @@ async function createMessageViewerModal() {
       
       tbody.appendChild(row);
     });
+
+    // Drop the trailing divider on the last row so it doesn't double up with
+    // the modal/content edge.
+    const lastRow = tbody.lastElementChild;
+    if (lastRow) {
+      lastRow.style.borderBottom = 'none';
+    }
   }
-  
+
   table.appendChild(thead);
   table.appendChild(tbody);
   tableContainer.appendChild(table);
@@ -516,20 +581,29 @@ function createMessageViewerButton() {
   button.onclick = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
+    // Capture what was unread BEFORE marking seen, so the modal can still flag
+    // those rows. Opening then marks the log as seen and clears the icon dot.
+    const unreadSince = getLastSeen();
+    markMessageLogSeen();
+    updateUnreadDot(button);
+
     // Remove existing modal if present (to refresh data)
     if (messageViewerModal) {
       messageViewerModal.remove();
       messageViewerModal = null;
     }
-    
+
     // Create and show new modal with fresh data
-    messageViewerModal = await createMessageViewerModal();
+    messageViewerModal = await createMessageViewerModal(unreadSince);
   };
-  
+
   // Insert before the voice clip button
   parent.insertBefore(button, voiceClipButton);
-  
+
+  // Reflect any unread messages as soon as the button appears.
+  updateUnreadDot(button);
+
   return button;
 }
 
@@ -538,20 +612,37 @@ export function setupMessageViewer() {
   const ensureButtonExists = () => {
     // Only show in DM chat context
     const isDMContext = window.location.pathname.includes('/direct/t/');
-    if (!isDMContext) {
+
+    // When the composer has text, Instagram swaps the mic/action buttons for a
+    // Send button. The logger button must not show in that state or it breaks
+    // the composer layout (it stacks above Send).
+    const sendButton = document.querySelector('[aria-label="Send"][role="button"], svg[aria-label="Send"]');
+    const voiceClipButton = document.querySelector('svg[aria-label="Voice Clip"]')?.closest('[role="button"]');
+
+    if (!isDMContext || sendButton || !voiceClipButton) {
       if (messageViewerButton) {
         messageViewerButton.remove();
         messageViewerButton = null;
       }
       return;
     }
-    
+
     // Try to create button if it doesn't exist
     if (!messageViewerButton || !document.contains(messageViewerButton)) {
       messageViewerButton = createMessageViewerButton();
+    } else {
+      // Button already present — keep its unread dot in sync.
+      updateUnreadDot(messageViewerButton);
     }
   };
-  
+
+  // Update the dot the moment a new message is deleted, even if the modal is closed.
+  window.addEventListener('instafn-new-deleted-message', () => {
+    if (messageViewerButton && document.contains(messageViewerButton)) {
+      updateUnreadDot(messageViewerButton);
+    }
+  });
+
   // Initial setup
   ensureButtonExists();
   

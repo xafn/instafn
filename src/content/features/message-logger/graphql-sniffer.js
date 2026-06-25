@@ -1,10 +1,22 @@
 /**
  * GraphQL Sniffer - Injected into page context
  * This intercepts GraphQL requests and relays responses to the content script
+ *
+ * NOTE: this sniffer is shared by several features (Message Logger, Profile
+ * Follow Indicator, Post Hover Info). Each forwarded message carries its own
+ * flag (isProfileRequest / isPostsRequest) so consumers only react to what they
+ * care about and each feature toggles on/off independently.
+ * TODO: this lives under message-logger/ for historical reasons; extract it to a
+ * shared location (e.g. content/lib/) so it isn't owned by one feature folder.
  */
 
 (function() {
   "use strict";
+
+  // Idempotent: may be injected both as a MAIN-world content script (document_start)
+  // and via the older async path. Whichever runs first wins; later runs no-op.
+  if (window.__instafnGraphqlSnifferInstalled) return;
+  window.__instafnGraphqlSnifferInstalled = true;
 
   // Intercept fetch API
   const originalFetch = window.fetch;
@@ -45,6 +57,15 @@
           bodyStr.includes("__crn") &&
           bodyStr.includes("comet.igweb.PolarisProfileRoute"));
 
+      // The profile grid's posts feed (each node carries a `taken_at` date that
+      // Post Hover Info surfaces on hover). Flagged separately from
+      // isProfileRequest so it's never mistaken for a follow-status response.
+      // Match the PolarisProfilePosts* family so scroll-pagination pages are
+      // captured too, not just the first PolarisProfilePostsQuery.
+      const isPostsRequest =
+        bodyStr.includes("PolarisProfilePosts") ||
+        bodyStr.includes("xdt_api__v1__feed__user_timeline_graphql_connection");
+
       // Debug: log all GraphQL fetch requests
       console.log(
         "[Instafn graphql-sniffer] GraphQL fetch request:",
@@ -53,7 +74,7 @@
         bodyStr.substring(0, 200)
       );
 
-      if (isProfileRequest) {
+      if (isProfileRequest || isPostsRequest) {
         console.log(
           "[Instafn graphql-sniffer]  Intercepted profile GraphQL request (fetch):",
           url
@@ -70,7 +91,8 @@
                 type: "graphql-response",
                 url: url,
                 data: JSON.stringify(data),
-                isProfileRequest: true,
+                isProfileRequest: isProfileRequest,
+                isPostsRequest: isPostsRequest,
               },
               "*"
             );
@@ -84,7 +106,8 @@
                   type: "graphql-response",
                   url: url,
                   data: text,
-                  isProfileRequest: true,
+                  isProfileRequest: isProfileRequest,
+                  isPostsRequest: isPostsRequest,
                 },
                 "*"
               );
@@ -163,6 +186,17 @@
             (bodyStr.includes("__crn") &&
               bodyStr.includes("comet.igweb.PolarisProfileRoute")))));
 
+    // The profile grid's posts feed (see fetch path above). Forwarded under its
+    // own flag so Post Hover Info works whether or not the other GraphQL-based
+    // features are enabled.
+    const isPostsRequest =
+      url &&
+      (url.includes("/graphql/query") ||
+        url.includes("/api/graphql") ||
+        url.includes("/ajax/bz")) &&
+      (bodyStr.includes("PolarisProfilePosts") ||
+        bodyStr.includes("xdt_api__v1__feed__user_timeline_graphql_connection"));
+
     // Only log profile requests to reduce spam
     if (isProfileRequest) {
       console.log(
@@ -171,7 +205,7 @@
       );
     }
 
-    if (isInboxRequest || isProfileRequest) {
+    if (isInboxRequest || isProfileRequest || isPostsRequest) {
       const originalOnReadyStateChange = this.onreadystatechange;
 
       this.onreadystatechange = function() {
@@ -187,6 +221,7 @@
                   url: url,
                   data: responseText,
                   isProfileRequest: isProfileRequest,
+                  isPostsRequest: isPostsRequest,
                 },
                 "*"
               );
@@ -220,6 +255,7 @@
                         url: url,
                         data: responseText,
                         isProfileRequest: isProfileRequest,
+                        isPostsRequest: isPostsRequest,
                       },
                       "*"
                     );

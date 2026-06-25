@@ -28,8 +28,9 @@
           <div>
             <h2>Made by afn</h2>
             <p>
-              Please contact me if there are any bugs or feature requests! Made
-              with lots of love by
+              I wanted to make an extension that I use daily. Please contact me
+              if there are any bugs or feature requests! Made with lots of love
+              by
               <a
                 href="https://afn.im"
                 target="_blank"
@@ -68,7 +69,7 @@
                   <circle cx="12" cy="7" r="4" />
                 </svg>
               </div>
-              <span>Profile Features</span>
+              <span>Profile</span>
             </button>
 
             <button class="sidebar-item" data-section="confirmations">
@@ -85,7 +86,7 @@
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
               </div>
-              <span>Action Confirmations</span>
+              <span>Confirm actions</span>
             </button>
 
             <button class="sidebar-item" data-section="privacy">
@@ -132,14 +133,15 @@
                   stroke="currentColor"
                   stroke-width="2"
                 >
-                  <polygon points="23 7 16 12 23 17 23 7" />
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
                 </svg>
               </div>
               <span>Video & Media</span>
             </button>
 
-            <button class="sidebar-item" data-section="navigation">
+            <button class="sidebar-item" data-section="downloads">
               <div class="sidebar-item-icon">
                 <svg
                   width="20"
@@ -148,12 +150,15 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
                 >
-                  <rect x="5" y="2" width="14" height="20" rx="7" />
-                  <path d="M12 6v8" />
+                  <path d="M12 3v12" />
+                  <path d="M7 11l5 5 5-5" />
+                  <path d="M4 21h16" />
                 </svg>
               </div>
-              <span>Navigation</span>
+              <span>Downloads</span>
             </button>
 
             <button class="sidebar-item" data-section="display">
@@ -165,13 +170,34 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
                 >
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                  <line x1="8" y1="21" x2="16" y2="21" />
-                  <line x1="12" y1="17" x2="12" y2="21" />
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+                  <circle cx="12" cy="12" r="3" />
                 </svg>
               </div>
               <span>Display</span>
+            </button>
+
+            <button class="sidebar-item" data-section="backup">
+              <div class="sidebar-item-icon">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                  <polyline points="7 3 7 8 15 8" />
+                </svg>
+              </div>
+              <span>Backup</span>
             </button>
 
             <button class="sidebar-item" data-section="about">
@@ -192,6 +218,30 @@
                 </svg>
               </div>
               <span>About</span>
+            </button>
+
+            <button
+              class="sidebar-item"
+              id="developerSidebarItem"
+              data-section="developer"
+              style="display: none"
+            >
+              <div class="sidebar-item-icon">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+              </div>
+              <span>Developer</span>
             </button>
           </nav>
         </aside>
@@ -241,8 +291,7 @@
                   <span class="setting-title">Block Typing Receipts</span>
                   <span class="setting-description"
                     >Blocks typing receipts from being sent to the server in
-                    messages. Warning: This may cause delays in messages being
-                    delivered.</span
+                    messages.</span
                   >
                 </div>
                 <label class="toggle">
@@ -255,7 +304,7 @@
 
           <!-- Action Confirmations -->
           <div class="section-content" data-section="confirmations">
-            <h2 class="section-title">Action Confirmations</h2>
+            <h2 class="section-title">Confirm actions</h2>
             <div class="section-description">
               Prevent accidental actions by requiring a confirmation before
               performing them.
@@ -343,7 +392,7 @@
 
           <!-- Profile Features -->
           <div class="section-content active" data-section="profile">
-            <h2 class="section-title">Profile Features</h2>
+            <h2 class="section-title">Profile</h2>
             <div class="setting">
               <div class="setting-content">
                 <div class="setting-info">
@@ -364,15 +413,16 @@
             <div class="setting">
               <div class="setting-content">
                 <div class="setting-info">
-                  <span class="setting-title">Profile Comments</span>
+                  <span class="setting-title">Follow Analyzer</span>
                   <span class="setting-description"
-                    >Adds a comment section to profile pages where users can
-                    leave comments. These comments are visible only to those
-                    with this extension installed. Use responsibly.</span
+                    >The analyzer makes a lot of requests to Instagram's servers
+                    to get your followers and following. On large accounts
+                    (13,000+ connections) this MAY get you rate-limited. Use at
+                    your own risk.</span
                   >
                 </div>
                 <label class="toggle">
-                  <input type="checkbox" id="enableProfileComments" />
+                  <input type="checkbox" id="activateFollowAnalyzer" />
                   <span class="toggle-slider"></span>
                 </label>
               </div>
@@ -407,22 +457,73 @@
                 </label>
               </div>
             </div>
-            <div class="setting">
+            <div class="setting time-format-wrapper">
               <div class="setting-content">
                 <div class="setting-info">
-                  <span class="setting-title">Follow Analyzer</span>
+                  <span class="setting-title">Show Date on Post Hover</span>
                   <span class="setting-description"
-                    >Adds a button on your profile to analyze your followers and
-                    following. Track who unfollowed you, who you don't follow
-                    back, who you follow back, and more. Warning: Do not use
-                    this if you have 13000+ connections. Use at your own
-                    risk.</span
+                    >When hovering over a post on a profile page, show the date
+                    underneath like and comment counts.</span
                   >
                 </div>
                 <label class="toggle">
-                  <input type="checkbox" id="activateFollowAnalyzer" />
+                  <input type="checkbox" id="enablePostHoverInfo" />
                   <span class="toggle-slider"></span>
                 </label>
+              </div>
+              <div class="setting-nested inline" id="nestedPostHoverDateFormat">
+                <div class="date-format-field">
+                  <select
+                    class="date-format-select"
+                    data-date-select="postHoverDateFormat"
+                  ></select>
+                  <div class="date-format-preview">
+                    Preview:
+                    <span data-date-preview="postHoverDateFormat"></span>
+                  </div>
+                  <div
+                    class="date-format-custom"
+                    data-date-custom="postHoverDateFormat"
+                    hidden
+                  >
+                    <input
+                      type="text"
+                      id="postHoverDateFormat"
+                      class="date-format-input"
+                      spellcheck="false"
+                      autocomplete="off"
+                      autocapitalize="off"
+                      placeholder="{M}/{D}/{YY}"
+                    />
+                    <details class="date-format-help">
+                      <summary>Available tokens</summary>
+                      <div class="date-token-legend" data-date-legend></div>
+                    </details>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="setting time-format-wrapper">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Profile Grid Columns</span>
+                  <span class="setting-description"
+                    >Set how many columns you see on a profile's grid.</span
+                  >
+                </div>
+              </div>
+              <div class="date-format-field">
+                <select id="profileGridColumns" class="date-format-select">
+                  <option value="default" selected>Default (auto layout)</option>
+                  <option value="1">1 column</option>
+                  <option value="2">2 columns</option>
+                  <option value="3">3 columns</option>
+                  <option value="4">4 columns</option>
+                  <option value="5">5 columns</option>
+                  <option value="6">6 columns</option>
+                  <option value="7">7 columns</option>
+                  <option value="8">8 columns</option>
+                </select>
               </div>
             </div>
           </div>
@@ -446,11 +547,74 @@
                 </label>
               </div>
             </div>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Hold Video for 2x Speed</span>
+                  <span class="setting-description"
+                    >Press and hold a video, or hold the spacebar while the
+                    video is focused / on the page, to fast-forward at 2x speed.
+                    Let go to return to normal.</span
+                  >
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="enableReelSpeedHold" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Drag Carousel Dots to Scrub</span>
+                  <span class="setting-description"
+                    >Drag across a carousel post's dot indicator to snap-scroll
+                    through its images.</span
+                  >
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="enableCarouselDotDrag" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <!-- Messages -->
           <div class="section-content" data-section="messages">
             <h2 class="section-title">Messages</h2>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Native DM Themes</span>
+                  <span class="setting-description"
+                    >Uses the actual theme set in your chat as the background and
+                    colour scheme, just like on mobile.</span
+                  >
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="enableDMBackground" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Message Logger</span>
+                  <span class="setting-description"
+                    >Logs deleted messages in the extension. View deleted
+                    messages by clicking the box button in the messages textbox.
+                    Only logs messages when the Instagram website is
+                    active.</span
+                  >
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="enableMessageLogger" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
             <div class="setting">
               <div class="setting-content">
                 <div class="setting-info">
@@ -499,28 +663,213 @@
                 </label>
               </div>
             </div>
+          </div>
+
+          <!-- Downloads -->
+          <div class="section-content" data-section="downloads">
+            <h2 class="section-title">Downloads</h2>
+            <div class="section-description">
+              Adds download buttons across Instagram that save media at the best
+              available quality.
+            </div>
             <div class="setting">
               <div class="setting-content">
                 <div class="setting-info">
-                  <span class="setting-title">Message Logger</span>
-                  <span class="setting-description"
-                    >Logs deleted messages in the extension. View deleted
-                    messages by clicking the box button in the messages textbox.
-                    Only logs messages when the Instagram website is
-                    active.</span
-                  >
+                  <span class="setting-title">Enable Downloads</span>
                 </div>
                 <label class="toggle">
-                  <input type="checkbox" id="enableMessageLogger" />
+                  <input type="checkbox" id="enableMediaDownloader" />
                   <span class="toggle-slider"></span>
                 </label>
+              </div>
+              <div class="setting-nested" id="nestedMediaDownloader">
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Ask for Quality</span>
+                      <span class="setting-description"
+                        >Before each download, open a dialog to pick the
+                        resolution. When off, the highest available quality is
+                        always saved.</span
+                      >
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="downloadAskQuality" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Ask Where to Save</span>
+                      <span class="setting-description"
+                        >Show the browser's "Save As" dialog for each download
+                        instead of saving straight to your Downloads folder.</span
+                      >
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="downloadAskLocation" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Posts</span>
+                      <span class="setting-description"
+                        >Adds a download button to the action bar of posts.
+                        Carousels have the option to save one or all media.</span
+                      >
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="downloadOnPosts" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Reels</span>
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="downloadOnReels" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Stories</span>
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="downloadOnStories" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Profile Pictures</span>
+                      <span class="setting-description"
+                        >Hover over a profile picture to reveal a download
+                        button.</span
+                      >
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="downloadProfilePictures" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Voice Messages</span>
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="downloadAudioMessages" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Chat Attachments</span>
+                      <span class="setting-description"
+                        >Adds a download button next to the hover buttons in
+                        messages.</span
+                      >
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="downloadChatImages" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Embed Metadata</span>
+                      <span class="setting-description"
+                        >Saves all media with its creator, caption, date, and
+                        location in the metadata whenever available.</span
+                      >
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="downloadEmbedMetadata" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Navigation -->
-          <div class="section-content" data-section="navigation">
-            <h2 class="section-title">Navigation</h2>
+          <!-- Display -->
+          <div class="section-content" data-section="display">
+            <h2 class="section-title">Display</h2>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Show Elapsed Time in Calls</span>
+                  <span class="setting-description"
+                    >Shows how long a call has been active while you are in a
+                    call.</span
+                  >
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="enableCallTimer" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting time-format-wrapper">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Show Exact Time on Dates</span>
+                  <span class="setting-description"
+                    >Replaces every relative date on Instagram (e.g. "2d") with
+                    an exact date.</span
+                  >
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="showExactTime" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="setting-nested inline" id="nestedTimeFormat">
+                <div class="date-format-field">
+                  <select
+                    class="date-format-select"
+                    data-date-select="timeFormat"
+                  ></select>
+                  <div class="date-format-preview">
+                    Preview: <span data-date-preview="timeFormat"></span>
+                  </div>
+                  <div class="date-format-custom" data-date-custom="timeFormat" hidden>
+                    <input
+                      type="text"
+                      id="timeFormat"
+                      class="date-format-input"
+                      spellcheck="false"
+                      autocomplete="off"
+                      autocapitalize="off"
+                      placeholder="{M}/{D}/{YY}, {h}:{mm} {A}"
+                    />
+                    <details class="date-format-help">
+                      <summary>Available tokens</summary>
+                      <div class="date-token-legend" data-date-legend></div>
+                    </details>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="setting">
               <div class="setting-content">
                 <div class="setting-info">
@@ -531,6 +880,94 @@
                 </div>
                 <label class="toggle">
                   <input type="checkbox" id="hideRecentSearches" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title"
+                    >Hide Suggested Accounts on Profiles</span
+                  >
+                  <span class="setting-description"
+                    >Hides the "Suggested for you" accounts carousel shown on
+                    profile pages.</span
+                  >
+                </div>
+                <label class="toggle">
+                  <input
+                    type="checkbox"
+                    id="hideSuggestedAccountsOnProfile"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Remove Right Sidebar</span>
+                  <span class="setting-description"
+                    >Removes the entire right column on the home feed (account
+                    switcher, suggestions, and footer).</span
+                  >
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="hideRightSidebar" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="setting-nested" id="nestedRightSidebar">
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Hide Suggested Profiles</span>
+                      <span class="setting-description"
+                        >Hides the "Suggested for you" accounts list in the home
+                        feed sidebar.</span
+                      >
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="hideSuggestedProfiles" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="setting">
+                  <div class="setting-content">
+                    <div class="setting-info">
+                      <span class="setting-title">Hide Home Footer</span>
+                      <span class="setting-description"
+                        >Hides the footer text in the home feed sidebar.</span
+                      >
+                    </div>
+                    <label class="toggle">
+                      <input type="checkbox" id="hideHomeFooter" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Hide Stories Tray</span>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="hideStoriesTray" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Hide Notes Tray</span>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="hideNotesTray" />
                   <span class="toggle-slider"></span>
                 </label>
               </div>
@@ -614,77 +1051,35 @@
             </div>
           </div>
 
-          <!-- Display -->
-          <div class="section-content" data-section="display">
-            <h2 class="section-title">Display</h2>
+          <!-- Backup -->
+          <div class="section-content" data-section="backup">
+            <h2 class="section-title">Backup</h2>
+            <div class="section-description">
+              Export your settings to a JSON file you can keep as a backup or
+              move to another browser, then import it to restore them.
+            </div>
             <div class="setting">
               <div class="setting-content">
                 <div class="setting-info">
-                  <span class="setting-title">Show Elapsed Time in Calls</span>
-                  <span class="setting-description"
-                    >Shows how long a call have been active when you are in a
-                    call.</span
-                  >
+                  <span class="setting-title">Export Settings</span>
                 </div>
-                <label class="toggle">
-                  <input type="checkbox" id="enableCallTimer" />
-                  <span class="toggle-slider"></span>
-                </label>
+                <button id="exportSettings" class="backup-button">Export</button>
               </div>
             </div>
             <div class="setting">
               <div class="setting-content">
                 <div class="setting-info">
-                  <span class="setting-title">Show Exact Time on Dates</span>
-                  <span class="setting-description"
-                    >Replaces every instance of a date on Instagram with the
-                    time format you select below.</span
-                  >
+                  <span class="setting-title">Import Settings</span>
                 </div>
-                <label class="toggle">
-                  <input type="checkbox" id="showExactTime" />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-              <div class="setting-nested" id="nestedTimeFormat">
-                <div class="setting time-format-wrapper">
-                  <div class="setting-content">
-                    <div class="setting-info">
-                      <span class="setting-title">Time Format</span>
-                    </div>
-                  </div>
-                  <select id="timeFormat" class="time-format-select">
-                    <option value="default"
-                      >Jan 1, 2026, 6:14 AM (Default)</option
-                    >
-                    <option value="full"
-                      >January 1, 2026, 6:14:52 AM (Full)</option
-                    >
-                    <option value="short">1/1/2026, 6:14 AM (Short)</option>
-                    <option value="iso">2026-01-01 06:14:52 (ISO)</option>
-                    <option value="us">01/01/2026, 6:14 AM (US)</option>
-                    <option value="european"
-                      >01/01/2026, 06:14 (European)</option
-                    >
-                    <option value="date-only">Jan 1, 2026 (Date Only)</option>
-                    <option value="time-only">6:14 AM (Time Only)</option>
-                    <option value="24h">Jan 1, 2026, 06:14 (24-hour)</option>
-                    <option value="24h-full"
-                      >January 1, 2026, 06:14:52 (24-hour Full)</option
-                    >
-                    <option value="relative-precise"
-                      >2d (Jan 1, 2026, 6:14 AM) (Relative + Exact)</option
-                    >
-                    <option value="compact"
-                      >1 Jan 2026, 6:14 AM (Compact)</option
-                    >
-                    <option value="rfc2822"
-                      >Mon, 01 Jan 2026 06:14:52 +0000 (RFC 2822)</option
-                    >
-                  </select>
-                </div>
+                <button id="importSettings" class="backup-button">Import</button>
               </div>
             </div>
+            <input
+              type="file"
+              id="importFileInput"
+              accept="application/json,.json"
+              hidden
+            />
           </div>
 
           <!-- About -->
@@ -698,7 +1093,7 @@
               <div class="about-item">
                 <div class="about-label">Support</div>
                 <div class="about-value">
-                  <a href="mailto:hey@afn.im" class="about-link">hey@afn.im</a>
+                  <a href="https://github.com/xafn/instafn/issues" class="about-link" target="_blank" rel="noopener noreferrer">github.com/xafn/instafn/issues</a>
                 </div>
               </div>
               <div class="about-item">
@@ -711,7 +1106,45 @@
                     class="about-link"
                     >afn.im</a
                   >
+                  <a
+                    href="https://ko-fi.com/affan"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="about-link"
+                    >Donate :)</a
+                  >
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Developer (hidden until unlocked) -->
+          <div class="section-content" data-section="developer">
+            <h2 class="section-title">Developer</h2>
+            <div class="section-description">
+              Internal tools for testing Instafn.
+            </div>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Show Welcome Screen</span>
+                  <span class="setting-description"
+                    >Re-open the first-run welcome screen.</span
+                  >
+                </div>
+                <button id="devShowWelcome" class="backup-button">Show</button>
+              </div>
+            </div>
+            <div class="setting">
+              <div class="setting-content">
+                <div class="setting-info">
+                  <span class="setting-title">Open Instagram with Changelog</span>
+                  <span class="setting-description"
+                    >Opens Instagram's homepage with the "What's New" changelog
+                    showing.</span
+                  >
+                </div>
+                <button id="devOpenChangelog" class="backup-button">Open</button>
               </div>
             </div>
           </div>
@@ -721,6 +1154,9 @@
         <button id="save" class="save-button">Save Changes</button>
       </footer>
     </div>
+    <script type="module" src="modal.js"></script>
+    <script type="module" src="toast.js"></script>
+    <script src="settings-shared.js"></script>
     <script src="settings.js"></script>
   </body>
 </html>

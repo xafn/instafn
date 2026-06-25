@@ -5,17 +5,91 @@ let processedElements = new WeakSet();
 let currentFormat = "default";
 let currentEnabled = false;
 
+const TOKEN_MONTHS_LONG = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+const TOKEN_MONTHS_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const TOKEN_DAYS_LONG = [
+  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+];
+const TOKEN_DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * Format a Date using brace tokens, e.g. "{MM}/{DD}/{YYYY} {h}:{mm} {A}".
+ * Unknown {tokens} are left untouched so literal braces survive.
+ *
+ * NOTE: keep this token table in sync with formatTokens() in
+ * src/settings/settings-shared.js, which powers the live preview in the
+ * settings UI (the two live in different module systems).
+ *
+ * @param {Date} date - The date to format
+ * @param {string} fmt - Format string containing {tokens}
+ * @returns {string} Formatted date and time
+ */
+export function formatWithTokens(date, fmt) {
+  const pad = (n) => n.toString().padStart(2, "0");
+  const year = date.getFullYear();
+  const monthIdx = date.getMonth();
+  const day = date.getDate();
+  const dow = date.getDay();
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const seconds = date.getSeconds();
+  const hour12 = hours % 12 || 12;
+  const ampm = hours >= 12 ? "PM" : "AM";
+
+  const map = {
+    YYYY: year,
+    YY: pad(year % 100),
+    MMMM: TOKEN_MONTHS_LONG[monthIdx],
+    MMM: TOKEN_MONTHS_SHORT[monthIdx],
+    MM: pad(monthIdx + 1),
+    M: monthIdx + 1,
+    DD: pad(day),
+    D: day,
+    dddd: TOKEN_DAYS_LONG[dow],
+    ddd: TOKEN_DAYS_SHORT[dow],
+    HH: pad(hours),
+    H: hours,
+    hh: pad(hour12),
+    h: hour12,
+    mm: pad(minutes),
+    m: minutes,
+    ss: pad(seconds),
+    s: seconds,
+    A: ampm,
+    a: ampm.toLowerCase(),
+    time: `${hour12}:${pad(minutes)} ${ampm}`,
+    date: `${TOKEN_MONTHS_SHORT[monthIdx]} ${day}, ${year}`,
+  };
+
+  return String(fmt).replace(/\{(\w+)\}/g, (full, token) =>
+    token in map ? String(map[token]) : full
+  );
+}
+
 /**
  * Format a datetime string based on the selected format
  * @param {string} datetime - ISO 8601 datetime string (e.g., "2026-01-01T06:14:52.000Z")
- * @param {string} format - Format identifier
+ * @param {string} format - Format identifier, or a custom brace-token string
+ *   (e.g. "{MM}/{DD}/{YYYY} {h}:{mm} {A}")
  * @returns {string} Formatted date and time
  */
-function formatExactTime(datetime, format = "default") {
+export function formatExactTime(datetime, format = "default") {
   try {
     const date = new Date(datetime);
     if (isNaN(date.getTime())) {
       return datetime; // Return original if invalid
+    }
+
+    // Custom user format: anything containing a {token}. Legacy preset keys
+    // (no braces) keep flowing through the switch below for back-compat.
+    if (typeof format === "string" && format.includes("{")) {
+      return formatWithTokens(date, format);
     }
 
     const year = date.getFullYear();
@@ -157,6 +231,36 @@ function formatExactTime(datetime, format = "default") {
         const offsetMins = Math.abs(timezoneOffset) % 60;
         const offsetSign = timezoneOffset >= 0 ? "+" : "-";
         return `${dayName}, ${pad(day)} ${monthNamesShort[month - 1]} ${year} ${pad(hours)}:${pad(minutes)}:${pad(seconds)} ${offsetSign}${pad(offsetHours)}${pad(offsetMins)}`;
+
+      // --- Numeric day/month formats with a truncated 2-digit year, plus
+      // optional time. Shared with the Post Hover Info feature. ---
+      case "dd/mm/yy":
+        // 26/05/26
+        return `${pad(day)}/${pad(month)}/${pad(year % 100)}`;
+      case "dd/mm/yy-time":
+        // 26/05/26, 3:02 PM
+        return `${pad(day)}/${pad(month)}/${pad(year % 100)}, ${hour12}:${pad(minutes)} ${ampm}`;
+      case "mm/dd/yy":
+        // 05/26/26
+        return `${pad(month)}/${pad(day)}/${pad(year % 100)}`;
+      case "mm/dd/yy-time":
+        // 05/26/26, 3:02 PM
+        return `${pad(month)}/${pad(day)}/${pad(year % 100)}, ${hour12}:${pad(minutes)} ${ampm}`;
+      case "dd/mm/yyyy":
+        // 26/05/2026
+        return `${pad(day)}/${pad(month)}/${year}`;
+      case "dd/mm/yyyy-time":
+        // 26/05/2026, 3:02 PM
+        return `${pad(day)}/${pad(month)}/${year}, ${hour12}:${pad(minutes)} ${ampm}`;
+      case "mm/dd/yyyy":
+        // 05/26/2026
+        return `${pad(month)}/${pad(day)}/${year}`;
+      case "day-month":
+        // 26 May 2026
+        return `${day} ${monthNamesShort[month - 1]} ${year}`;
+      case "day-month-time":
+        // 26 May 2026, 3:02 PM
+        return `${day} ${monthNamesShort[month - 1]} ${year}, ${hour12}:${pad(minutes)} ${ampm}`;
 
       default:
         // Fallback to default format

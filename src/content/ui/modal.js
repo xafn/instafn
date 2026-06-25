@@ -363,18 +363,28 @@ function ensureStyles() {
     }
 
     .instafn-loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       text-align: center;
       padding: 40px 20px;
     }
 
     .instafn-loading-spinner {
-      margin-bottom: 20px;
-    }
-
-    .instafn-loading-spinner svg {
       width: 32px;
       height: 32px;
-      margin: 0 auto;
+      margin: 0 auto 20px;
+      border: 3px solid rgb(var(--ig-separator));
+      border-top-color: rgb(var(--ig-primary-text));
+      border-radius: 50%;
+      animation: instafn-spin 0.8s linear infinite;
+    }
+
+    @keyframes instafn-spin {
+      to {
+        transform: rotate(360deg);
+      }
     }
   `;
 
@@ -387,12 +397,18 @@ function ensureStyles() {
  * @param {string} titleText - Modal title
  * @param {Object} options - Options
  * @param {boolean} options.showTabs - Whether to show tabs (default: true)
+ * @param {boolean} options.closeOnBackdrop - Dismiss when the backdrop is clicked (default: true)
+ * @param {boolean} options.closeOnEscape - Dismiss when Escape is pressed (default: true)
  * @returns {Promise<HTMLElement>} - The overlay element containing the modal
  */
 export async function createModal(titleText, options = {}) {
   ensureStyles();
 
-  const { showTabs = true } = options;
+  const {
+    showTabs = true,
+    closeOnBackdrop = true,
+    closeOnEscape = true,
+  } = options;
 
   const overlay = document.createElement("div");
   overlay.className = "instafn-modal-overlay";
@@ -440,22 +456,26 @@ export async function createModal(titleText, options = {}) {
   overlay.appendChild(modal);
 
   // Close on backdrop click
-  const backdropClickHandler = (e) => {
-    if (e.target === overlay) {
-      overlay.remove();
-    }
-  };
-  overlay.addEventListener("click", backdropClickHandler);
-  overlay._clickHandler = backdropClickHandler;
+  if (closeOnBackdrop) {
+    const backdropClickHandler = (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+      }
+    };
+    overlay.addEventListener("click", backdropClickHandler);
+    overlay._clickHandler = backdropClickHandler;
+  }
 
   // Close on Escape key
-  const handleEscape = (e) => {
-    if (e.key === "Escape" && document.body.contains(overlay)) {
-      document.removeEventListener("keydown", handleEscape, true);
-      overlay.remove();
-    }
-  };
-  document.addEventListener("keydown", handleEscape, true);
+  if (closeOnEscape) {
+    const handleEscape = (e) => {
+      if (e.key === "Escape" && document.body.contains(overlay)) {
+        document.removeEventListener("keydown", handleEscape, true);
+        overlay.remove();
+      }
+    };
+    document.addEventListener("keydown", handleEscape, true);
+  }
 
   document.body.appendChild(overlay);
   return overlay;

@@ -266,9 +266,23 @@ export function interceptStoryQuickReactions() {
   });
 }
 
+// A "Send" button belongs to a story reply only when it shares a container
+// with the story-reply textarea. Without this check the matcher also fires on
+// the share-to-friends sheet and the DM message-bar send button.
+const isStoryReplySend = (btn) => {
+  if (!btn || btn.textContent.trim() !== "Send") return false;
+  let node = btn;
+  for (let i = 0; i < 6 && node; i++) {
+    if (node.querySelector?.('textarea[placeholder*="Reply to"]')) return true;
+    node = node.parentElement;
+  }
+  return false;
+};
+
 export function interceptStoryReplies() {
   intercept({
-    matcher: findText('div[role="button"][tabindex="0"]', "Send"),
+    matcher: (e) =>
+      isStoryReplySend(find('div[role="button"][tabindex="0"]')(e)),
     getElement: find('div[role="button"][tabindex="0"]'),
     getConfirmation: () => ({
       title: "Confirm reply",

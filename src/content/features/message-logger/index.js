@@ -5,6 +5,8 @@
  * including what message was deleted.
  */
 
+import { resolveThreadDisplayName } from "./thread-name.js";
+
 // Store messages by message_id
 const messageStore = new Map();
 
@@ -20,11 +22,26 @@ let currentUserFbid = null;
 // Store mapping of thread_fbid to thread name (for group chats)
 const threadNameMap = new Map();
 
+// Store mapping of thread_fbid to participant fbids (interop fbids, all threads).
+// This is how we name DMs ("the participant who isn't you") without scraping the
+// on-screen header, which was attributing the wrong thread to most messages.
+const threadParticipantsMap = new Map();
+
+// Store mapping of thread_fbid to the conversation header text, captured ONLY
+// while that exact thread is open (URL /direct/t/<id>/ === the delta thread_fbid).
+// Pairing the URL id with the visible header is reliable; this is what lets us
+// show a group's name/member list even when the inbox GraphQL never loads.
+const threadDisplayNameMap = new Map();
+
 // LocalStorage keys
+const STORAGE_KEY_MESSAGE_STORE = "instafn_message_store";
 const STORAGE_KEY_DELETED_MESSAGES = "instafn_deleted_messages";
 const STORAGE_KEY_SENDER_USERNAMES = "instafn_sender_usernames";
 const STORAGE_KEY_CURRENT_USER_FBID = "instafn_current_user_fbid";
 const STORAGE_KEY_THREAD_NAMES = "instafn_thread_names";
+const STORAGE_KEY_THREAD_PARTICIPANTS = "instafn_thread_participants";
+const STORAGE_KEY_THREAD_DISPLAY_NAMES = "instafn_thread_display_names";
+const STORAGE_KEY_THREAD_NAMES_MIGRATED = "instafn_thread_names_migrated_v1";
 
 // Configuration
 const MAX_STORE_SIZE = 5000; // Maximum messages to store
@@ -204,6 +221,26 @@ function processMessage(parsedData, url) {
       if (!item.data?.slide_delta_processor) return;
 
       item.data.slide_delta_processor.forEach((delta) => {
+        // DIAGNOSTIC: with window.__instafnSocketDebug on, log every delta type
+        // we walk. If an unsend produces a delta whose __typename is NOT
+        // "SlideUQPPDeleteMessage" (e.g. a renamed delete type), this surfaces it.
+        if (window.__instafnSocketDebug) {
+          console.log(
+            "[Instafn Message Logger] delta __typename:",
+            delta.__typename
+          );
+          if (
+            delta.__typename !== "SlideUQPPDeleteMessage" &&
+            /delete|unsend|revoke|remove/i.test(delta.__typename || "")
+          ) {
+            console.log(
+              "[Instafn Message Logger] ⚠️ delete-like delta NOT matched by our check:",
+              delta.__typename,
+              delta
+            );
+          }
+        }
+
         // Handle new messages
         if (delta.__typename === "SlideUQPPNewMessage" && delta.message) {
           const message = delta.message;
@@ -217,86 +254,15 @@ function processMessage(parsedData, url) {
               cleanupOldMessages();
             }
 
-            // Get thread_fbid for this message (this is what deletion deltas use!)
-            const messageThreadFbid =
-              message.thread_fbid || message.offline_threading_id;
+            // Get thread_fbid for this message (this is what deletion deltas use).
+            // Do NOT fall back to offline_threading_id — that's a per-message id,
+            // not a thread id, and using it corrupts the thread mapping.
+            const messageThreadFbid = message.thread_fbid;
 
-            // Try to get thread name from DOM if we don't have it stored yet
-            // This is critical - WebSocket messages have the thread_fbid that matches deletion deltas
-            if (messageThreadFbid) {
-              // Check if we already have a thread name stored for this thread_fbid
-              const existingName = threadNameMap.get(String(messageThreadFbid));
-
-              if (!existingName) {
-                // Don't have it yet - try to get from DOM
-                try {
-                  const selectors = [
-                    '[data-testid="thread-title"]',
-                    "header h1",
-                    'h1[dir="auto"]',
-                    '[role="heading"]',
-                    "h1",
-                    'header [dir="auto"]',
-                    'header span[dir="auto"]',
-                  ];
-
-                  for (const selector of selectors) {
-                    const element = document.querySelector(selector);
-                    if (element) {
-                      const threadNameText = element.textContent?.trim();
-                      if (
-                        threadNameText &&
-                        threadNameText.length > 0 &&
-                        threadNameText.length < 200 &&
-                        threadNameText !== "Messages"
-                      ) {
-                        // Store with the WebSocket message's thread_fbid (this matches deletion deltas!)
-                        threadNameMap.set(
-                          String(messageThreadFbid),
-                          threadNameText
-                        );
-                        // Also store with thread ID from URL if available
-                        const urlMatch = window.location.pathname.match(
-                          /\/direct\/t\/(\d+)\//
-                        );
-                        if (
-                          urlMatch &&
-                          String(urlMatch[1]) !== String(messageThreadFbid)
-                        ) {
-                          threadNameMap.set(
-                            String(urlMatch[1]),
-                            threadNameText
-                          );
-                        }
-                        localStorage.setItem(
-                          STORAGE_KEY_THREAD_NAMES,
-                          JSON.stringify(Array.from(threadNameMap.entries()))
-                        );
-                        console.log(
-                          `[Instafn Message Logger]  Stored thread name from DOM: "${threadNameText}" for thread_fbid: ${messageThreadFbid} (matches deletion deltas!)`
-                        );
-                        break;
-                      }
-                    }
-                  }
-                } catch (e) {
-                  // Ignore errors
-                }
-              } else {
-                // We already have a name stored - make sure it's also stored with this thread_fbid
-                // (in case it was stored with a different key from GraphQL)
-                if (existingName !== "") {
-                  threadNameMap.set(String(messageThreadFbid), existingName);
-                  localStorage.setItem(
-                    STORAGE_KEY_THREAD_NAMES,
-                    JSON.stringify(Array.from(threadNameMap.entries()))
-                  );
-                  console.log(
-                    `[Instafn Message Logger]  Ensured thread name "${existingName}" is stored with thread_fbid: ${messageThreadFbid}`
-                  );
-                }
-              }
-            }
+            // Thread names/participants come from the GraphQL inbox (see
+            // processGraphQLMessages), never from the on-screen header — the
+            // header reflects whatever conversation is open, not the thread this
+            // WebSocket event belongs to.
 
             // Store the message with its content (store as much info as possible)
             messageStore.set(messageId, {
@@ -313,6 +279,8 @@ function processMessage(parsedData, url) {
               // Store full message object for reference
               raw: message,
             });
+            // Persist so an unsend after a reload can still be matched.
+            scheduleSaveMessageStore();
 
             // Only log if there's actual text content
             if (text) {
@@ -375,148 +343,27 @@ function processMessage(parsedData, url) {
                 }
               };
 
-              // Get thread name from our stored thread name map using thread_fbid
-              // This is the key - we use thread_fbid from the deletion delta to look up the thread name
-              let threadName = "Unknown";
+              // Resolve the thread's display name from data we actually trust:
+              // participant fbids (for DMs) and real group names (for groups),
+              // both captured from the GraphQL inbox. The delta's thread_fbid is
+              // the lookup key.
               const threadId =
                 threadFbid ||
                 deletedMessage.threadFbid ||
                 deletedMessage.thread;
 
-              console.log(
-                `[Instafn Message Logger]  Looking up thread name for threadId: ${threadId}, threadFbid from delta: ${threadFbid}`
-              );
-              console.log(
-                `[Instafn Message Logger]  Thread name map size: ${
-                  threadNameMap.size
-                }, sample keys: ${Array.from(threadNameMap.keys())
-                  .slice(0, 10)
-                  .join(", ")}`
-              );
-
-              if (threadId) {
-                // Try multiple ID variations - deletion delta thread_fbid might match different stored keys
-                const idVariations = [
-                  String(threadFbid || ""), // Exact thread_fbid from delta
-                  String(threadId),
-                  String(deletedMessage.threadFbid || ""),
-                  String(deletedMessage.thread || ""),
-                ].filter((id) => id && id !== "undefined" && id !== "null");
-
-                let foundName = null;
-                let foundKey = null;
-
-                for (const idVar of idVariations) {
-                  const stored = threadNameMap.get(idVar);
-                  if (stored !== undefined) {
-                    foundName = stored;
-                    foundKey = idVar;
-                    break;
-                  }
-                }
-
-                if (foundName !== null) {
-                  // If it's an empty string, it's a group chat without a name - use thread ID
-                  threadName = foundName || String(threadId);
-                  console.log(
-                    `[Instafn Message Logger]  Found thread name entry: "${foundName}" (displaying: "${threadName}") using key: ${foundKey}`
-                  );
-                } else {
-                  // Try with the thread_fbid from the stored message
-                  const messageThreadFbid =
-                    deletedMessage.threadFbid || deletedMessage.thread;
-                  if (
-                    messageThreadFbid &&
-                    String(messageThreadFbid) !== String(threadId)
-                  ) {
-                    const storedThreadName2 = threadNameMap.get(
-                      String(messageThreadFbid)
-                    );
-                    if (storedThreadName2) {
-                      threadName = storedThreadName2;
-                      // Also store it with the deletion delta's thread_fbid for future use
-                      threadNameMap.set(String(threadId), threadName);
-                      localStorage.setItem(
-                        STORAGE_KEY_THREAD_NAMES,
-                        JSON.stringify(Array.from(threadNameMap.entries()))
-                      );
-                      console.log(
-                        `[Instafn Message Logger]  Found thread name: "${threadName}" using messageThreadFbid: ${messageThreadFbid}`
-                      );
-                    }
-                  }
-
-                  // If still not found, try to get from DOM as fallback
-                  if (threadName === "Unknown") {
-                    try {
-                      const selectors = [
-                        '[data-testid="thread-title"]',
-                        "header h1",
-                        'h1[dir="auto"]',
-                        '[role="heading"]',
-                        "h1",
-                        'header [dir="auto"]',
-                        'header span[dir="auto"]',
-                      ];
-
-                      for (const selector of selectors) {
-                        const element = document.querySelector(selector);
-                        if (element) {
-                          const text = element.textContent?.trim();
-                          if (
-                            text &&
-                            text.length > 0 &&
-                            text.length < 200 &&
-                            text !== "Messages"
-                          ) {
-                            threadName = text;
-                            // Store it for future use
-                            threadNameMap.set(String(threadId), threadName);
-                            if (
-                              messageThreadFbid &&
-                              String(messageThreadFbid) !== String(threadId)
-                            ) {
-                              threadNameMap.set(
-                                String(messageThreadFbid),
-                                threadName
-                              );
-                            }
-                            localStorage.setItem(
-                              STORAGE_KEY_THREAD_NAMES,
-                              JSON.stringify(
-                                Array.from(threadNameMap.entries())
-                              )
-                            );
-                            console.log(
-                              `[Instafn Message Logger]  Found thread name from DOM: "${threadName}"`
-                            );
-                            break;
-                          }
-                        }
-                      }
-                    } catch (e) {
-                      console.log(
-                        `[Instafn Message Logger]  Error getting thread name from DOM:`,
-                        e
-                      );
-                    }
-                  }
-                }
-              }
-
-              // If still unknown, use thread ID as fallback (instead of "Messages" or "Unknown Thread")
-              if (threadName === "Unknown" && threadId) {
-                threadName = String(threadId);
-              } else if (threadName === "Unknown") {
-                // Last resort - try to get thread ID from URL or use a generic fallback
-                const urlMatch = window.location.pathname.match(
-                  /\/direct\/t\/(\d+)\//
-                );
-                threadName = urlMatch ? String(urlMatch[1]) : "Unknown";
-              }
+              const threadName = resolveThreadDisplayName({
+                threadId,
+                senderFbid: deletedMessage.sender,
+                participantsMap: threadParticipantsMap,
+                threadNameMap,
+                displayNameMap: threadDisplayNameMap,
+                senderUsernameMap,
+                currentUserFbid,
+              });
 
               console.log(
-                `[Instafn Message Logger] 📌 Final thread name: "${threadName}" for threadId: ${threadId}`
+                `[Instafn Message Logger] 📌 Resolved thread name: "${threadName}" for threadId: ${threadId}`
               );
 
               // Store immediately - only store originalSender, not deletedBy
@@ -542,6 +389,10 @@ function processMessage(parsedData, url) {
               // Save immediately after storing
               saveDeletedMessages();
 
+              // Tell the viewer a new entry landed so it can show its unread dot
+              // without waiting for the modal to be reopened.
+              window.dispatchEvent(new CustomEvent("instafn-new-deleted-message"));
+
               if (deletedMessage.text) {
                 console.log(` Message deleted: "${deletedMessage.text}"`);
               } else {
@@ -550,6 +401,7 @@ function processMessage(parsedData, url) {
 
               // Remove from active message store
               messageStore.delete(messageId);
+              scheduleSaveMessageStore();
             } else {
               console.log(
                 ` Message deleted (ID: ${messageId}) - message not found in store`
@@ -995,11 +847,14 @@ function processGraphQLMessages(data) {
         return;
       }
 
-      // Extract usernames from thread participants and store mapping
+      // Extract usernames from thread participants and store mapping.
+      // Also collect the participant fbids so we can name DMs reliably later.
+      const participantFbids = [];
       if (thread.users && Array.isArray(thread.users)) {
         thread.users.forEach((user) => {
           const fbid = user.interop_messaging_user_fbid;
           const username = user.username;
+          if (fbid) participantFbids.push(String(fbid));
           if (fbid && username) {
             senderUsernameMap.set(String(fbid), username);
             console.log(
@@ -1020,23 +875,80 @@ function processGraphQLMessages(data) {
           console.log(
             `[Instafn Message Logger]  Stored current user FBID: ${currentUserFbid}`
           );
+          // Include the viewer so the participant count reflects everyone.
+          if (!participantFbids.includes(String(viewerFbid))) {
+            participantFbids.push(String(viewerFbid));
+          }
         }
       }
-
-      // Get thread name for group chats - only use explicit names, not participant lists
-      // Only store if we have an actual thread name (thread_name or title), not a constructed list
-      const threadName = thread.thread_name || thread.title || null;
 
       // Get thread IDs - we need to store the thread name with multiple keys to ensure we can find it
       const threadId = thread.thread_id || thread.id;
       // Also check thread_key - this might be the thread_fbid used in deletion deltas
       const threadKey = thread.thread_key;
 
-      // Determine if this is a group chat (has thread_name or title field, or has more than 2 users)
-      const isGroupChat =
-        thread.thread_name !== undefined ||
-        thread.title !== undefined ||
-        (thread.users && thread.users.length > 2);
+      // A thread is a group when it's not a 1:1. Instagram tags real DMs with
+      // thread_subtype "IG_ONLY_ONE_TO_ONE", which is the strongest signal; when
+      // it's missing we fall back to the participant count. We count
+      // participantFbids (which already includes the viewer, added above) rather
+      // than thread.users, because thread.users excludes the viewer and would make
+      // a 3-person group look like a 2-person DM. Getting this right matters
+      // because storing a name in threadNameMap is itself the "this is a group"
+      // signal the resolver uses — naming a DM here would misclassify it.
+      const isOneToOne = thread.thread_subtype === "IG_ONLY_ONE_TO_ONE";
+      const isGroupChat = thread.thread_subtype
+        ? !isOneToOne
+        : participantFbids.length > 2;
+
+      // The group's display title. Instagram's inbox field is `thread_title`
+      // (the old code looked for thread_name/title, which don't exist, so every
+      // group came through unnamed and fell back to the member list). Only trust
+      // it for groups — a DM's thread_title is just the partner's name and must
+      // go through the participant-based path, not the group-name map.
+      const threadName = isGroupChat
+        ? thread.thread_title || thread.thread_name || thread.title || null
+        : null;
+
+      // DIAGNOSTIC: for groups that still have no title, dump every field of the
+      // thread object so we can find which one holds the custom group name.
+      if (isGroupChat && !threadName) {
+        const dump = {};
+        for (const k of Object.keys(thread)) {
+          const v = thread[k];
+          // Only scalar fields — skip the big arrays/objects (users, messages).
+          if (v == null || typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+            dump[k] = v;
+          } else {
+            dump[k] = `<${Array.isArray(v) ? "array[" + v.length + "]" : typeof v}>`;
+          }
+        }
+        console.log(
+          "[Instafn Message Logger][thread-fields] unnamed group " + (thread.thread_id || thread.id),
+          dump
+        );
+      }
+
+      // Store participant fbids under every id form a deletion delta might use,
+      // so we can later name the thread from its participants regardless of which
+      // id format the delta carries.
+      if (participantFbids.length > 0) {
+        const participantKeys = [
+          threadId,
+          thread.id,
+          threadKey,
+          thread.thread_fbid,
+        ];
+        let storedParticipants = false;
+        for (const key of participantKeys) {
+          if (key) {
+            threadParticipantsMap.set(String(key), participantFbids);
+            storedParticipants = true;
+          }
+        }
+        if (storedParticipants) {
+          saveThreadParticipantsMap();
+        }
+      }
 
       // Store thread name using multiple keys:
       // 1. thread.thread_id (long GraphQL ID)
@@ -1133,6 +1045,15 @@ function processGraphQLMessages(data) {
           thread.thread_key || // thread_key might be the thread_fbid used in deletion deltas
           thread.thread_id ||
           thread.id;
+
+        // Bind the per-message thread_fbid (the id WebSocket deltas use) to this
+        // thread's participants, so DM naming works for the exact delta key.
+        if (participantFbids.length > 0 && message.thread_fbid) {
+          threadParticipantsMap.set(
+            String(message.thread_fbid),
+            participantFbids
+          );
+        }
 
         // Store thread name using multiple keys for redundancy
         // The key insight: deletion deltas use thread_fbid which might be thread.thread_key
@@ -1308,6 +1229,14 @@ function processGraphQLMessages(data) {
     console.log(
       `[Instafn Message Logger]  Processed GraphQL messages. Total stored: ${storedCount}, Store size: ${messageStore.size}`
     );
+    if (storedCount > 0) {
+      scheduleSaveMessageStore();
+    }
+    // Persist participants — the per-message set() calls above add message-level
+    // thread_fbid keys that the per-thread save didn't cover.
+    if (threadParticipantsMap.size > 0) {
+      saveThreadParticipantsMap();
+    }
     return storedCount;
   } catch (error) {
     console.error(
@@ -1443,6 +1372,88 @@ export function getDeletedMessagesStore() {
   return deletedMessagesStore;
 }
 
+// How many recent messages to keep in the persisted index. The in-memory store
+// can hold MAX_STORE_SIZE, but we cap what we write to localStorage so the index
+// survives reloads (to match unsends) without risking the storage quota.
+const PERSISTED_MESSAGE_LIMIT = 2500;
+
+let saveMessageStoreTimer = null;
+
+// Debounced persist — many messages can arrive in a burst; batch the writes.
+function scheduleSaveMessageStore() {
+  if (saveMessageStoreTimer) return;
+  saveMessageStoreTimer = setTimeout(() => {
+    saveMessageStoreTimer = null;
+    saveMessageStore();
+  }, 3000);
+}
+
+// Persist a slim copy of the message index (no bulky `raw`) so a deletion that
+// arrives in a later session can still be matched to its original message.
+function saveMessageStore() {
+  try {
+    const entries = Array.from(messageStore.values())
+      .sort((a, b) => (a.storedAt || 0) - (b.storedAt || 0))
+      .slice(-PERSISTED_MESSAGE_LIMIT)
+      .map((m) => ({
+        id: m.id,
+        text: m.text,
+        timestamp: m.timestamp,
+        sender: m.sender,
+        thread: m.thread,
+        contentType: m.contentType,
+        threadFbid: m.threadFbid,
+        storedAt: m.storedAt,
+      }));
+    localStorage.setItem(STORAGE_KEY_MESSAGE_STORE, JSON.stringify(entries));
+  } catch (e) {
+    // Most likely a quota error — retry once with a smaller slice.
+    try {
+      const entries = Array.from(messageStore.values())
+        .sort((a, b) => (a.storedAt || 0) - (b.storedAt || 0))
+        .slice(-500)
+        .map((m) => ({
+          id: m.id,
+          text: m.text,
+          timestamp: m.timestamp,
+          sender: m.sender,
+          thread: m.thread,
+          contentType: m.contentType,
+          threadFbid: m.threadFbid,
+          storedAt: m.storedAt,
+        }));
+      localStorage.setItem(STORAGE_KEY_MESSAGE_STORE, JSON.stringify(entries));
+    } catch (e2) {
+      console.error("[Instafn Message Logger] Error saving message store:", e2);
+    }
+  }
+}
+
+// Load the persisted message index so deletions of messages from earlier
+// sessions can be matched. Skips entries past the TTL.
+function loadMessageStore() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_MESSAGE_STORE);
+    if (!stored) return;
+    const now = Date.now();
+    const entries = JSON.parse(stored);
+    let loaded = 0;
+    entries.forEach((m) => {
+      if (!m || !m.id) return;
+      if (m.timestamp && now - parseInt(m.timestamp) > MESSAGE_TTL) return;
+      if (!messageStore.has(m.id)) {
+        messageStore.set(m.id, { ...m, source: m.source || "restored" });
+        loaded++;
+      }
+    });
+    console.log(
+      `[Instafn Message Logger] 📥 Restored ${loaded} messages into the index from storage`
+    );
+  } catch (e) {
+    console.error("[Instafn Message Logger] Error loading message store:", e);
+  }
+}
+
 // Save deleted messages to localStorage
 function saveDeletedMessages() {
   try {
@@ -1562,12 +1573,262 @@ function loadThreadNameMap() {
   }
 }
 
+// Save thread participants map to localStorage
+function saveThreadParticipantsMap() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY_THREAD_PARTICIPANTS,
+      JSON.stringify(Array.from(threadParticipantsMap.entries()))
+    );
+  } catch (e) {
+    console.error(
+      "[Instafn Message Logger] Error saving thread participants map:",
+      e
+    );
+  }
+}
+
+// Load thread participants map from localStorage
+function loadThreadParticipantsMap() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_THREAD_PARTICIPANTS);
+    if (stored) {
+      const mapArray = JSON.parse(stored);
+      mapArray.forEach(([threadId, fbids]) => {
+        if (Array.isArray(fbids)) {
+          threadParticipantsMap.set(String(threadId), fbids.map(String));
+        }
+      });
+      console.log(
+        `[Instafn Message Logger] 📥 Loaded ${mapArray.length} thread participant mappings from storage`
+      );
+    }
+  } catch (e) {
+    console.error(
+      "[Instafn Message Logger] Error loading thread participants map:",
+      e
+    );
+  }
+}
+
+// Save thread display-name map to localStorage
+function saveThreadDisplayNameMap() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY_THREAD_DISPLAY_NAMES,
+      JSON.stringify(Array.from(threadDisplayNameMap.entries()))
+    );
+  } catch (e) {
+    console.error(
+      "[Instafn Message Logger] Error saving thread display-name map:",
+      e
+    );
+  }
+}
+
+// Load thread display-name map from localStorage
+function loadThreadDisplayNameMap() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_THREAD_DISPLAY_NAMES);
+    if (stored) {
+      const mapArray = JSON.parse(stored);
+      mapArray.forEach(([threadId, name]) => {
+        threadDisplayNameMap.set(String(threadId), name);
+      });
+      console.log(
+        `[Instafn Message Logger] 📥 Loaded ${mapArray.length} thread display names from storage`
+      );
+    }
+  } catch (e) {
+    console.error(
+      "[Instafn Message Logger] Error loading thread display-name map:",
+      e
+    );
+  }
+}
+
+// Instagram chrome strings that are headings/h1s elsewhere on the page (global
+// nav, account switcher, our own modal). The old page-wide querySelector grabbed
+// these by mistake — e.g. a group chat was named "Switch accounts" because the
+// account-switcher heading matched before the conversation header did.
+const HEADER_BLOCKLIST = new Set([
+  "Messages",
+  "Switch accounts",
+  "Switch",
+  "Notifications",
+  "Instagram",
+  "Home",
+  "Search",
+  "Explore",
+  "Reels",
+  "Create",
+  "Profile",
+  "Settings",
+  "Direct",
+  "Threads",
+  "Meta",
+  "More",
+  "Your messages",
+  "Message requests",
+  "New message",
+  "No posts yet",
+  "Deleted Messages",
+]);
+
+function isBlockedHeaderText(text) {
+  return HEADER_BLOCKLIST.has(text);
+}
+
+// Read the title shown in the header of the currently-open conversation. Scoped
+// to the conversation pane (role="main") and filtered so global nav, popovers,
+// dialogs (including our own viewer) and known chrome strings can't be captured
+// as a thread name.
+function readOpenThreadHeaderTitle() {
+  const main = document.querySelector('div[role="main"]') || document;
+  const selectors = [
+    'div[role="heading"][aria-level="1"]',
+    'header [role="heading"]',
+    "header h1",
+    'header span[dir="auto"]',
+  ];
+  for (const selector of selectors) {
+    const elements = main.querySelectorAll(selector);
+    for (const element of elements) {
+      // Never trust headings that live in the global nav or any dialog/popover
+      // (the account switcher, menus, our own "Deleted Messages" modal, etc.).
+      if (
+        element.closest('[role="navigation"]') ||
+        element.closest('[role="dialog"]')
+      ) {
+        continue;
+      }
+      // Must be actually rendered — a hidden off-screen heading isn't the header.
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) continue;
+
+      const text = element.textContent && element.textContent.trim();
+      if (
+        text &&
+        text.length > 0 &&
+        text.length < 200 &&
+        !isBlockedHeaderText(text) &&
+        !/^\d+$/.test(text)
+      ) {
+        return text;
+      }
+    }
+  }
+  return null;
+}
+
+// Capture the open conversation's header text, keyed by the thread id in the URL.
+// Both come from the same open thread, so this can't mis-attribute names across
+// threads the way the old WebSocket-time DOM scraping did.
+//
+// We require the thread to have been open for one full tick before capturing,
+// because right after navigating the URL updates before the header DOM does —
+// capturing immediately could pair thread B's id with thread A's stale header.
+let lastTickThreadId = null;
+function captureOpenThreadDisplayName() {
+  try {
+    const match = window.location.pathname.match(/\/direct\/t\/(\d+)/);
+    if (!match) {
+      lastTickThreadId = null;
+      return;
+    }
+    const threadId = String(match[1]);
+    const wasStable = lastTickThreadId === threadId;
+    lastTickThreadId = threadId;
+    if (!wasStable) return; // first tick on this thread — let the header settle
+
+    const title = readOpenThreadHeaderTitle();
+    if (!title) return;
+    if (threadDisplayNameMap.get(threadId) === title) return;
+    threadDisplayNameMap.set(threadId, title);
+    saveThreadDisplayNameMap();
+    console.log(
+      `[Instafn Message Logger] 🏷️ Captured thread name "${title}" for open thread ${threadId}`
+    );
+  } catch (e) {
+    // Ignore
+  }
+}
+
+// One-time cleanup of the thread-name map. An earlier version scraped the
+// on-screen conversation header and stored it as a "thread name", which attached
+// the wrong name (often a DM partner's username, or UI text like "No posts yet")
+// to unrelated threads. We can't tell a real group name from a scraped one after
+// the fact, so we drop every non-empty entry and keep only the "" markers (which
+// reliably came from GraphQL and mean "unnamed group"). Real group names are
+// re-added cleanly the next time the DM inbox loads.
+function migrateThreadNames() {
+  try {
+    if (localStorage.getItem(STORAGE_KEY_THREAD_NAMES_MIGRATED)) return;
+
+    let removed = 0;
+    for (const [key, value] of Array.from(threadNameMap.entries())) {
+      if (value !== "") {
+        threadNameMap.delete(key);
+        removed++;
+      }
+    }
+    localStorage.setItem(
+      STORAGE_KEY_THREAD_NAMES,
+      JSON.stringify(Array.from(threadNameMap.entries()))
+    );
+    localStorage.setItem(STORAGE_KEY_THREAD_NAMES_MIGRATED, "1");
+    console.log(
+      `[Instafn Message Logger] 🧹 Cleaned ${removed} scraped thread name(s). Real group names rebuild on next inbox load.`
+    );
+  } catch (e) {
+    console.error(
+      "[Instafn Message Logger] Error migrating thread names:",
+      e
+    );
+  }
+}
+
+// Drop any captured header names that are actually Instagram chrome (e.g.
+// "Switch accounts" wrongly attached to a group chat by the old page-wide
+// scrape). Runs every load — not one-time gated — so bad entries from a prior
+// build are cleaned up. Real names are re-captured from the scoped header.
+function purgeBadThreadDisplayNames() {
+  try {
+    let removed = 0;
+    for (const [key, value] of Array.from(threadDisplayNameMap.entries())) {
+      if (typeof value !== "string" || isBlockedHeaderText(value.trim())) {
+        threadDisplayNameMap.delete(key);
+        removed++;
+      }
+    }
+    if (removed > 0) {
+      saveThreadDisplayNameMap();
+      console.log(
+        `[Instafn Message Logger] 🧹 Purged ${removed} chrome-string thread name(s) (e.g. "Switch accounts").`
+      );
+    }
+  } catch (e) {
+    // Ignore
+  }
+}
+
 export function initMessageLogger() {
   // Load persisted data from localStorage
+  loadMessageStore();
   loadDeletedMessages();
   loadSenderUsernameMap();
   loadCurrentUserFbid();
   loadThreadNameMap();
+  loadThreadParticipantsMap();
+  loadThreadDisplayNameMap();
+  migrateThreadNames();
+  purgeBadThreadDisplayNames();
+
+  // Capture the open conversation's name from its header (keyed by the URL's
+  // thread id). The header loads asynchronously and changes as you navigate
+  // between threads, so poll on a light interval.
+  captureOpenThreadDisplayName();
+  setInterval(captureOpenThreadDisplayName, 1500);
 
   // Set up listener for messages from injected script (WebSocket)
   setupPostMessageListener();

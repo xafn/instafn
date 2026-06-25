@@ -1,0 +1,127 @@
+/* Media Downloader — injected button styles.
+ *
+ * Buttons blend into Instagram's own controls (transparent, currentColor icon,
+ * subtle hover). Each surface gets light positioning tweaks. Everything is
+ * namespaced under .instafn-dl-* so it can't leak into IG styles. */
+
+.instafn-dl-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: inherit;
+  border-radius: 8px;
+  padding: 4px;
+  line-height: 0;
+  transition: transform 0.12s ease, opacity 0.12s ease, background 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.instafn-dl-btn:hover {
+  transform: scale(1.06);
+  opacity: 0.7;
+}
+
+.instafn-dl-btn:active {
+  transform: scale(0.92);
+}
+
+.instafn-dl-btn svg {
+  display: block;
+  pointer-events: none;
+}
+
+.instafn-dl-btn.instafn-dl-busy {
+  opacity: 0.85;
+  cursor: default;
+}
+
+@keyframes instafn-dl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.instafn-dl-spin {
+  transform-origin: 50% 50%;
+  animation: instafn-dl-spin 0.7s linear infinite;
+}
+
+/* Posts, reels and stories don't use these styles: their download button is a
+ * clone of IG's own Share button (see inject-common.js), so it inherits IG's
+ * exact box model and needs no CSS here. A faint hover/active for the cloned
+ * item keeps it feeling interactive. */
+.instafn-dl-item {
+  cursor: pointer;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.instafn-dl-item:hover {
+  opacity: 0.7;
+}
+.instafn-dl-item:active {
+  transform: scale(0.92);
+}
+
+/* --- Profile picture overlay --- */
+.instafn-dl-pfp-wrap {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  /* Above IG's active-story ring (a canvas/SVG that otherwise covers the corner). */
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+.instafn-dl-pfp-wrap .instafn-dl-btn {
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  padding: 5px;
+  border-radius: 50%;
+  pointer-events: auto;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+/* Reveal whenever the avatar container — or anything nested inside it — is
+ * hovered. A descendant combinator on our own anchor class (rather than a
+ * direct-child selector) keeps this working when IG wraps the avatar in extra
+ * nested elements, e.g. the active-story ring. */
+.instafn-dl-pfp-anchor:hover .instafn-dl-pfp-wrap,
+.instafn-dl-pfp-wrap:hover {
+  opacity: 1;
+}
+
+/* Hover state for the carousel modal's action rows (the IG _a9 rows don't carry
+ * one standalone). Uses the modal component's own hover token for consistency. */
+.instafn-dl-rows > button {
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+.instafn-dl-rows > button:hover {
+  background: rgb(var(--ig-highlight-background, 38 38 38));
+}
+
+/* --- DM voice message --- */
+/* Small download button pinned to the voice bubble's bottom-right corner,
+ * always visible. The bubble is made position:relative at inject time so this
+ * lands inside it rather than being flung to the bottom-left of the full-width
+ * message row. */
+.instafn-dl-audio-wrap {
+  position: absolute;
+  bottom: 9px;
+  right: 11px;
+  z-index: 6;
+  opacity: 1;
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+}
+/* No filled circle — just the white glyph over the coloured voice bubble. */
+.instafn-dl-audio-wrap .instafn-dl-btn {
+  color: #fff;
+  padding: 0;
+  pointer-events: auto;
+}
+.instafn-dl-audio-wrap .instafn-dl-btn:hover {
+  opacity: 0.75;
+}

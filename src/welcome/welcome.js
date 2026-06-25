@@ -29,7 +29,8 @@ const DEFAULTS = {
   showExactTime: false,
   timeFormat: "default",
   enableCallTimer: false,
-  enableProfileComments: false,
+  enablePostHoverInfo: false,
+  postHoverDateFormat: "dd/mm/yy",
 };
 
 document.addEventListener("DOMContentLoaded", () => {

@@ -1,0 +1,37 @@
+/* Profile Grid Columns
+ *
+ * Instagram renders every profile grid (Posts, Reels, Reposts, Tagged) as a
+ * column of flex "rows", each row (`._ac7v`) holding exactly three cells baked
+ * into the DOM. There is no single grid container whose column count we can just
+ * override, so instead we dissolve each row with `display: contents` — its three
+ * cells then become direct children of the row's parent — and turn that parent
+ * into a real CSS grid with the chosen number of columns. New rows added during
+ * infinite scroll are picked up automatically via `:has()`, so no observer is
+ * needed.
+ *
+ * Everything here is gated on `html[data-instafn-grid-cols]`, which the feature
+ * only sets when the user picks a non-default count while on a profile page. At
+ * the default of 3 the attribute is absent and Instagram's native layout is left
+ * entirely untouched.
+ */
+
+/* The parent that holds the `._ac7v` rows becomes the grid. */
+html[data-instafn-grid-cols] div:has(> ._ac7v) {
+  display: grid !important;
+  grid-template-columns: repeat(var(--instafn-grid-cols, 3), minmax(0, 1fr)) !important;
+  gap: var(--instafn-grid-gap, 4px) !important;
+}
+
+/* Each row dissolves so its cells flow into the grid above. */
+html[data-instafn-grid-cols] ._ac7v {
+  display: contents !important;
+}
+
+/* Cells were sized for a 3-up flex row; let them stretch to fill their grid
+ * column and drop any row-level spacing so the grid `gap` is the only gutter. */
+html[data-instafn-grid-cols] ._ac7v > * {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+}

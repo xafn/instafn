@@ -5,15 +5,24 @@
  * Can be used for notifications, tooltips, and feedback messages.
  */
 
+// A bare checkmark tick (no surrounding circle), stroked with currentColor so it
+// inherits the toast's text colour. Pass it as `options.icon` to prefix a
+// success toast — e.g. "Saved" downloads.
+export const CHECK_ICON =
+  '<svg aria-label="Done" role="img" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">' +
+  '<polyline points="20 6 9 17 4 12"></polyline>' +
+  "</svg>";
+
 /**
  * Shows a toast message in the center of the screen
  * @param {string} message - The message to display
  * @param {Object} options - Configuration options
  * @param {number} options.duration - How long to show the toast in ms (default: 2000)
  * @param {string} options.id - Unique ID for the toast (default: 'instafn-toast')
+ * @param {string} options.icon - Optional leading SVG markup (e.g. CHECK_ICON)
  */
 export function showToast(message, options = {}) {
-  const { duration = 2000, id = "instafn-toast" } = options;
+  const { duration = 2000, id = "instafn-toast", icon = null } = options;
 
   // Remove existing toast with same ID
   const existing = document.getElementById(id);
@@ -51,7 +60,18 @@ export function showToast(message, options = {}) {
   // Create toast element
   const toast = document.createElement("div");
   toast.id = id;
-  toast.textContent = message;
+  if (icon) {
+    // text + trailing icon on one centred row. The icon markup is a trusted
+    // in-extension constant (never user content), so innerHTML is safe here.
+    const label = document.createElement("span");
+    label.textContent = message;
+    const glyph = document.createElement("span");
+    glyph.style.display = "inline-flex";
+    glyph.innerHTML = icon;
+    toast.append(label, glyph);
+  } else {
+    toast.textContent = message;
+  }
 
   // Apply unified styles
   Object.assign(toast.style, {
@@ -59,6 +79,9 @@ export function showToast(message, options = {}) {
     top: "50%",
     left: "50%",
     transform: "translate(-50%, -50%)",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "7px",
     background: "rgba(0, 0, 0, 0.72)",
     color: "#fff",
     padding: "10px 16px",

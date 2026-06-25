@@ -11,8 +11,7 @@ import {
 } from "./logic.js";
 import { injectStylesheet } from "../../utils/styleLoader.js";
 import { createModal, confirmModal } from "../../ui/modal.js";
-import { BUTTON_ID as COMMENTS_BUTTON_ID } from "../profile-comments/config.js";
-import { findReferenceButton } from "../profile-comments/ui/button.js";
+import { findReferenceButton } from "./find-reference-button.js";
 
 const ensureStyles = () =>
   injectStylesheet(
@@ -26,7 +25,13 @@ const SCAN_BUTTON_ID = "instafn-scan-button";
 let currentUsername = null;
 let isInjecting = false;
 let retryCount = 0;
-const MAX_RETRIES = 5;
+// Retries are frame-tight (requestAnimationFrame, ~16ms) rather than every
+// 500ms, so when Instagram paints its profile buttons incrementally and the
+// first injection attempt misses the reference, we recover within a frame or
+// two — before the late insertion is perceptible — instead of popping in half a
+// second later and shifting the button row. ~90 frames ≈ 1.5s covers a slow
+// header render; the always-on observer remains the primary, immediate path.
+const MAX_RETRIES = 90;
 
 /**
  * Check if we're on the user's own profile by looking for "Edit profile" or "View archive" buttons
@@ -64,13 +69,6 @@ function createScanButtonWrapper(referenceWrapper) {
   button.style.cursor = "pointer";
   button.className = "instafn-scan-btn";
   button.innerHTML = `
-    <div class="x6s0dn4 x78zum5 xdt5ytf xl56j7k">
-      <svg aria-label="Analyze" class="x1lliihq x1n2onr6 x5n08af" fill="currentColor" height="16" role="img" viewBox="0 0 24 24" width="16">
-        <title>Analyze</title>
-        <path d="M12 8.252a3.5 3.5 0 1 1-3.499-3.5 3.5 3.5 0 0 1 3.5 3.5Z" fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></path>
-        <path d="M15 19.5v-.447a4.05 4.05 0 0 0-4.05-4.049H6.044a4.05 4.05 0 0 0-4.049 4.049v.447" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-      </svg>
-    </div>
     <div class="_ap3a _aaco _aacw _aad6 _aade" dir="auto">Analyze</div>
   `;
 
@@ -131,15 +129,59 @@ export function createFollowButton(
 
 let scanBtnObserver = null;
 
-function injectEarlyHideCSS() {
+// Inject the button's *layout-critical* CSS synchronously (inline <style>), well
+// before follow-analyzer.css — which injectStylesheet() loads as an async
+// <link> — has a chance to arrive. Without this, the scan button's wrapper is
+// inserted into the button row while its sizing rules (height, padding, the
+// `flex: 1` on the .html-div slot) are still missing, so the slot has ~zero
+// width until the stylesheet loads and then the whole row reflows: the late
+// "pop-in" layout shift on load. Inlining geometry here reserves the correct
+// slot the instant the wrapper is injected; the async stylesheet then only
+// layers on colors/hover, which don't move anything. Keep this in sync with the
+// matching selectors in follow-analyzer.css.
+function injectCriticalLayoutCSS() {
   if (document.getElementById("instafn-follow-analyzer-early")) return;
   const style = document.createElement("style");
   style.id = "instafn-follow-analyzer-early";
   style.textContent = `
-    .instafn-scan-btn:not(.instafn-scan-fab):not(.instafn-visible),
-    .instafn-scan-fab:not(.instafn-visible) { display: none !important; }
-    .instafn-scan-btn.instafn-visible,
-    .instafn-scan-fab.instafn-visible { display: flex !important; }
+    .instafn-button-container {
+      display: flex !important;
+      gap: 12px !important;
+      justify-content: center !important;
+      align-items: center !important;
+      flex-wrap: wrap !important;
+      min-height: 44px !important;
+      contain: layout !important;
+    }
+    .instafn-button-container > .html-div {
+      flex: 1 1 0% !important;
+      display: flex !important;
+      min-width: 0 !important;
+    }
+    .instafn-scan-btn {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      height: 44px !important;
+      min-height: 0 !important;
+      width: 100% !important;
+      padding: 0 20px !important;
+      margin: 0 !important;
+      border: none !important;
+      border-radius: 12px !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+      white-space: nowrap !important;
+      font-size: 0.875rem !important;
+      font-weight: var(--font-weight-system-semibold) !important;
+      font-family: var(--font-family-system) !important;
+      line-height: var(--system-14-line-height) !important;
+      background-color: rgb(var(--ig-colors-button-secondary-background)) !important;
+      color: rgb(var(--ig-colors-button-secondary-text)) !important;
+      cursor: pointer !important;
+      user-select: none !important;
+    }
   `;
   const target = document.head || document.documentElement || document.body;
   if (target) {
@@ -161,6 +203,10 @@ let isEnabled = false;
  */
 export function injectScanButton() {
   if (!isEnabled) return;
+  // Reserve the button's geometry synchronously before the async stylesheet
+  // arrives, in case this runs before initFollowAnalyzerEarly() (both are gated
+  // behind async storage reads, so their order isn't guaranteed). Idempotent.
+  injectCriticalLayoutCSS();
   ensureStyles();
   if (isInjecting) return;
 
@@ -198,10 +244,7 @@ export function injectScanButton() {
   if (!reference) {
     if (retryCount < MAX_RETRIES) {
       retryCount++;
-      console.log(
-        `[Instafn Follow Analyzer] Reference button not found, retrying... (${retryCount}/${MAX_RETRIES})`
-      );
-      setTimeout(() => injectScanButton(), 500);
+      requestAnimationFrame(() => injectScanButton());
     } else {
       console.warn(
         "[Instafn Follow Analyzer] Max retries reached, giving up on button injection"
@@ -243,11 +286,8 @@ export function injectScanButton() {
       });
     }
 
-    // Insert after comments button if it exists, otherwise after reference wrapper
-    const commentsButton = reference.container.querySelector(
-      `#${COMMENTS_BUTTON_ID}`
-    );
-    const insertAfter = commentsButton || reference.wrapper;
+    // Insert after the reference wrapper (e.g. the Edit profile button)
+    const insertAfter = reference.wrapper;
     if (insertAfter.nextSibling) {
       reference.container.insertBefore(buttonWrapper, insertAfter.nextSibling);
     } else {
@@ -317,7 +357,7 @@ export function getCurrentUsername() {
 }
 
 export function initFollowAnalyzerEarly() {
-  injectEarlyHideCSS();
+  injectCriticalLayoutCSS();
 }
 
 export async function openModal(titleText) {
@@ -415,22 +455,7 @@ export async function renderScanButton(content, overlay) {
       overlay.querySelector(".instafn-modal-title").textContent = "Scanning...";
       content.innerHTML = `
         <div class="instafn-loading-container">
-          <div class="instafn-loading-spinner">
-            <svg aria-label="Loading..." class="xemfg65 xa4qsjk x1ka1v4i xbv57ra" role="img" viewBox="0 0 100 100" style="width: 32px; height: 32px; margin: 0 auto;">
-              <rect class="x1i210e2" height="6" opacity="0" rx="3" ry="3" transform="rotate(-90 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.08333333333333333" rx="3" ry="3" transform="rotate(-60 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.16666666666666666" rx="3" ry="3" transform="rotate(-30 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.25" rx="3" ry="3" transform="rotate(0 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.3333333333333333" rx="3" ry="3" transform="rotate(30 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.4166666666666667" rx="3" ry="3" transform="rotate(60 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.5" rx="3" ry="3" transform="rotate(90 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.5833333333333334" rx="3" ry="3" transform="rotate(120 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.6666666666666666" rx="3" ry="3" transform="rotate(150 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.75" rx="3" ry="3" transform="rotate(180 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.8333333333333334" rx="3" ry="3" transform="rotate(210 50 50)" width="25" x="72" y="47"></rect>
-              <rect class="x1i210e2" height="6" opacity="0.9166666666666666" rx="3" ry="3" transform="rotate(240 50 50)" width="25" x="72" y="47"></rect>
-            </svg>
-          </div>
+          <div class="instafn-loading-spinner"></div>
           <p class="instafn-loading-text">Scanning followers and following...</p>
         </div>
       `;

@@ -532,3 +532,10 @@ export function confirmModal({
     }
   });
 }
+
+// Also expose on window so the extension's own settings pages (popup.js /
+// settings.js, which run as plain scripts, not bundled modules) can reuse the
+// exact same modal component.
+if (typeof window !== "undefined") {
+  window.InstafnModal = { createModal, confirmModal };
+}

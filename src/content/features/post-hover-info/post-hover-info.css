@@ -1,0 +1,41 @@
+/* Post Hover Info — the date is a cloned count <li>, so its text already matches
+   Instagram's like/comment styling. When our date is added we stack the whole
+   list (likes, comments, date) vertically with one even gap. */
+
+ul.instafn-post-hover-ul {
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+/* IG spaces the count items with a per-item trailing margin; zero it so the
+   column gap is the only (even) spacing. */
+ul.instafn-post-hover-ul > li {
+  margin: 0 !important;
+}
+
+/* Date row reads left-to-right: [icon] [date]. */
+li.instafn-post-hover-date-item {
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+}
+
+/* The cloned icon span inherits the <li>'s link-blue color; force white so the
+   calendar matches the white counts. */
+.instafn-post-hover-cal-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  color: #fff !important;
+}
+
+.instafn-post-hover-cal {
+  display: block;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
