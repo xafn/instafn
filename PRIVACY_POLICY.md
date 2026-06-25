@@ -1,16 +1,20 @@
 # Instafn Privacy Policy
 
-**Last Updated:** Jan 8, 2026
+**Last Updated:** Jun 25, 2026
 
 ## Introduction
 
-Instafn ("we", "our", or "us") is a browser extension that enhances the Instagram web experience with privacy controls and useful features. This Privacy Policy explains how we collect, use, and protect your information when you use our extension.
+Instafn ("we", "our", or "us") is a browser extension that enhances the Instagram web experience with privacy controls and useful features. This Privacy Policy explains how the extension handles your information.
+
+**In short: Instafn does not collect, transmit, or sell any of your data. Everything the extension does happens locally in your browser, on your own device.**
 
 ## Information We Collect
 
-### User Preferences
+**We do not collect any user data.** Instafn has no backend server and no analytics. We never receive, store, or transmit your information to ourselves or to any third party.
 
-We store your extension settings and preferences locally in your browser using Chrome's storage API. This includes:
+The extension does store some data **locally on your device**, using Chrome's storage API. This data never leaves your browser:
+
+### User Preferences
 
 - Feature toggles (which features are enabled/disabled)
 - UI customization preferences
@@ -21,87 +25,70 @@ We store your extension settings and preferences locally in your browser using C
 If you enable the message logger feature, the extension:
 
 - Logs deleted direct messages locally in your browser
-- Stores message metadata (sender, timestamp, content)
-- Automatically deletes messages older than 24 hours
-- Stores a maximum of 5,000 messages locally
+- Stores message metadata (sender, timestamp, content) on your device only
+- Automatically deletes older messages and is capped at a maximum number of stored messages
 
 **This data is stored only on your device and is never transmitted to us or any third party.**
 
-### Profile Comments Data (Optional Feature)
-
-If you enable the profile comments feature, comments you post are stored on Supabase (a third-party database service) to enable the feature's functionality. This includes:
-
-- Comment text
-- Your Instagram username and user ID
-- Profile information for the profile where comments are posted
-- Timestamps
-
-**This data is stored on Supabase servers and is necessary for the profile comments feature to function.**
-
 ### User Activity Monitoring
 
-The extension monitors certain user actions on Instagram (likes, comments, follows, calls, etc.) to provide confirmation dialogs and analyze follower relationships. This monitoring:
+To provide features such as confirmation dialogs and the follow analyzer, the extension observes certain actions on Instagram (likes, comments, follows, calls, etc.). This monitoring:
 
 - Occurs only on Instagram.com
-- Is processed locally in your browser
-- Is not transmitted to external servers (except for profile comments feature)
+- Is processed entirely locally in your browser
+- Is never transmitted to any external server
 
-### Authentication Information
+### Media Downloader (Optional Feature)
 
-The extension uses your Instagram session cookies and authentication tokens to:
+If you use the media downloader, the extension fetches the media you explicitly choose to download (posts, reels, stories, profile pictures, voice notes, and DM attachments) from Instagram's content delivery networks and saves it to your device. These files are downloaded **to** your device and are never uploaded or sent anywhere by the extension.
 
-- Authenticate API requests to Instagram's servers
-- Enable features that require Instagram API access (profile comments, follow analyzer)
+### Instagram Session
 
-**These credentials are used only to communicate with Instagram's servers and are never stored or transmitted to us.**
+The extension runs on Instagram while you are logged in and relies on your existing Instagram session to read the page and its content, the same way the Instagram website does. The extension does not store, copy, or transmit your Instagram credentials, cookies, or session tokens.
 
 ## How We Use Your Information
 
-- **Local Features:** Most features process data entirely on your device
-- **Profile Comments:** Comments are stored on Supabase to enable the profile comments feature
-- **Settings:** Your preferences are stored locally to remember your choices
+All processing happens on your device, to make the features you enable work. We do not use your information for any other purpose, and we have no access to it.
 
 ## Data Sharing
 
-We do not sell, rent, or share your personal information with third parties except:
+We do not sell, rent, or share your information with third parties. Because the extension has no server and collects no data, there is nothing for us to share.
 
-- **Supabase:** Profile comments data is stored on Supabase servers as necessary for the feature to function
-- **Instagram:** The extension makes API requests to Instagram using your authenticated session
+The only network requests the extension is involved in are made directly between your browser and Instagram (and Instagram's CDNs) — for example, loading the page you are already viewing, or downloading media you choose to save. These go to Instagram, not to us.
 
 ## Data Storage
 
-- **Local Storage:** Most data is stored locally in your browser using Chrome's storage API
-- **Supabase:** Profile comments are stored on Supabase servers
-- **Automatic Deletion:** Message logger data automatically expires after 24 hours
+- **Local Storage:** All data is stored locally in your browser using Chrome's storage API.
+- **Automatic Deletion:** Message logger data is automatically pruned over time.
+- **No Remote Storage:** No data is stored on any server operated by us or any third party.
 
 ## Your Rights
 
 You can:
 
 - Enable or disable any feature at any time through the extension settings
+- Export and import your settings using the built-in Backup feature
 - Clear all stored data by uninstalling the extension
-- Access your locally stored data through Chrome's developer tools
 
 ## Security
 
-We implement reasonable security measures to protect your information. However, no method of transmission over the internet is 100% secure.
+Because your data stays on your own device, it is protected by your browser and operating system. We do not transmit your data over the internet, so it is not exposed in transit.
 
 ## Children's Privacy
 
-Our extension is not intended for users under the age of 13. We do not knowingly collect information from children under 13.
+Our extension is not intended for users under the age of 13. We do not knowingly collect information from children under 13. (In fact, we do not knowingly collect information from anyone.)
 
 ## Changes to This Privacy Policy
 
 We may update this Privacy Policy from time to time. We will notify you of any changes by updating the "Last Updated" date.
 
-## Contact Us
+## Contact Me
 
-If you have questions about this Privacy Policy, please contact us at [your email or contact method].
+If you have questions about this Privacy Policy, please contact me at hey@afn.im.
 
 ## Third-Party Services
 
-- **Supabase:** We use Supabase to store profile comments data. Their privacy policy: https://supabase.com/privacy
-- **Instagram:** This extension interacts with Instagram's services. Instagram's privacy policy: https://help.instagram.com/519522125107875
+- **Instagram:** This extension runs on and interacts with Instagram's website using your existing session. Instagram's privacy policy: https://help.instagram.com/519522125107875
 
 ---
 
